@@ -8,6 +8,7 @@ import click
 from song_lab.audio.jobs import SongJob
 from song_lab.pipeline import build_conversion_package
 from song_lab.presets import STYLE_PRESETS
+from song_lab.providers.ace_step_api import AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
 
 
@@ -52,7 +53,7 @@ def package_command(input_path: str, style: str, output_path: str) -> None:
     destination.write_text(json.dumps(package.model_dump(), ensure_ascii=False, indent=2), encoding="utf-8")
 
     click.echo(f"Wrote conversion test package: {destination}")
-    click.echo("Next: paste the music_prompt + lyric_adaptation_prompt output into your music generator and score the result.")
+    click.echo("Next: run mock-audio or ace-audio to generate an artifact.")
 
 
 @main.command("mock-audio")
@@ -73,24 +74,73 @@ def package_command(input_path: str, style: str, output_path: str) -> None:
 @click.option("--duration", default=90, show_default=True, type=int, help="Target song duration in seconds.")
 def mock_audio_command(package_path: str, output_dir: str, duration: int) -> None:
     """Run the current end-to-end flow without a real music model yet."""
-    package_data = json.loads(Path(package_path).read_text(encoding="utf-8"))
+    package_data = _read_package(package_path)
+    provider = MockSongProvider()
+    result = provider.run(_job_from_package(package_data, output_dir, duration))
+    click.echo(result.model_dump_json(indent=2))
+
+
+@main.command("ace-audio")
+@click.option(
+    "--package",
+    "package_path",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Path to a package JSON created by the package command.",
+)
+@click.option(
+    "--output-dir",
+    default="outputs/audio",
+    show_default=True,
+    type=click.Path(file_okay=False),
+    help="Where to write ACE-Step output.",
+)
+@click.option("--base-url", default="http://127.0.0.1:8001", show_default=True, help="ACE-Step API server URL.")
+@click.option("--api-key", default=None, help="Optional ACE-Step API key.")
+@click.option("--model", default="acestep-v15-turbo", show_default=True, help="ACE-Step model name.")
+@click.option("--duration", default=90, show_default=True, type=int, help="Target song duration in seconds.")
+@click.option("--format", "audio_format", default="mp3", show_default=True, help="Output audio format, e.g. mp3 or wav.")
+@click.option("--vocal-language", default="ar", show_default=True, help="Vocal language code for lyrics.")
+def ace_audio_command(
+    package_path: str,
+    output_dir: str,
+    base_url: str,
+    api_key: str | None,
+    model: str,
+    duration: int,
+    audio_format: str,
+    vocal_language: str,
+) -> None:
+    """Generate real audio using a running ACE-Step API server."""
+    package_data = _read_package(package_path)
+    provider = AceStepApiProvider(
+        base_url=base_url,
+        api_key=api_key,
+        model=model,
+        audio_format=audio_format,
+        vocal_language=vocal_language,
+    )
+    result = provider.run(_job_from_package(package_data, output_dir, duration))
+    click.echo(result.model_dump_json(indent=2))
+
+
+def _read_package(package_path: str) -> dict:
+    return json.loads(Path(package_path).read_text(encoding="utf-8"))
+
+
+def _job_from_package(package_data: dict, output_dir: str, duration: int) -> SongJob:
     prompt = package_data.get("music_prompt", "").strip()
     lyrics = package_data.get("lyric_adaptation_prompt", "").strip()
 
     if not prompt:
         raise click.ClickException("Package is missing music_prompt.")
 
-    provider = MockSongProvider()
-    result = provider.run(
-        SongJob(
-            prompt=prompt,
-            lyrics=lyrics,
-            output_dir=Path(output_dir),
-            duration_seconds=duration,
-        )
+    return SongJob(
+        prompt=prompt,
+        lyrics=lyrics,
+        output_dir=Path(output_dir),
+        duration_seconds=duration,
     )
-
-    click.echo(result.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":
