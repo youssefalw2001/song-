@@ -1,0 +1,13 @@
+{
+  "version": "0.1.0",
+  "project": "Yemeni Song Conversion Lab",
+  "quality_target": "one beautiful slow Yemeni oud dream-pop version before expanding",
+  "minimum_good_score": {
+    "emotion": 8,
+    "yemeni_identity": 7,
+    "vocal_beauty": 7,
+    "lyrics": 7,
+    "instrumental": 7,
+    "replay_value": 7
+  }
+}
