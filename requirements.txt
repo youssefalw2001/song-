@@ -1,2 +1,5 @@
 click>=8.1.7
 pydantic>=2.8.2
+
+# Optional local audio backends. Install only when you are ready for GPU/audio work:
+# pip install faster-whisper demucs soundfile
