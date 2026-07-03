@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 
 from song_lab.api.schemas import AceGenerateRequest, GenerateRequest, ImproveRequest, ScoreRequest, TextAceGenerateRequest, TextPackageRequest
 from song_lab.audio.jobs import SongJob
@@ -17,13 +17,16 @@ from song_lab.providers.ace_step_api import AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
 from song_lab.scoring import VersionScore, append_score
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+FRONTEND_INDEX = ROOT_DIR / "docs" / "index.html"
+
 
 def _allowed_origins() -> list[str]:
     raw = os.getenv("CORS_ALLOW_ORIGINS", "*")
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-app = FastAPI(title="Arabic Song Conversion Lab", version="0.4.1")
+app = FastAPI(title="Arabic Song Conversion Lab", version="0.4.2")
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,7 +43,6 @@ async def add_cors_headers(request: Request, call_next):
         response = Response(status_code=204)
     else:
         response = await call_next(request)
-
     origin = request.headers.get("origin") or "*"
     allowed = _allowed_origins()
     response.headers["Access-Control-Allow-Origin"] = origin if "*" not in allowed else "*"
@@ -50,9 +52,16 @@ async def add_cors_headers(request: Request, call_next):
     return response
 
 
+@app.get("/")
+def home() -> FileResponse:
+    if not FRONTEND_INDEX.exists():
+        raise HTTPException(status_code=404, detail="Frontend index.html not found")
+    return FileResponse(FRONTEND_INDEX)
+
+
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "cors_allow_origins": _allowed_origins()}
+    return {"status": "ok", "cors_allow_origins": _allowed_origins(), "frontend": FRONTEND_INDEX.exists()}
 
 
 @app.get("/styles")
