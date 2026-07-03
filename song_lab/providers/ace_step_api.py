@@ -54,15 +54,40 @@ class AceStepApiProvider(SongProvider):
             self.api_mode = "native"
 
     def run(self, job: SongJob) -> SongJobResult:
+        return self._run_and_wrap(job, source_audio_path=None, task_type="text2music", cover_strength=None)
+
+    def run_with_audio(
+        self,
+        job: SongJob,
+        source_audio_path: Path,
+        task_type: str = "cover",
+        cover_strength: float | None = 0.55,
+    ) -> SongJobResult:
+        return self._run_and_wrap(job, source_audio_path=source_audio_path, task_type=task_type, cover_strength=cover_strength)
+
+    def _run_and_wrap(
+        self,
+        job: SongJob,
+        source_audio_path: Path | None,
+        task_type: str,
+        cover_strength: float | None,
+    ) -> SongJobResult:
         job.output_dir.mkdir(parents=True, exist_ok=True)
         metadata_path = job.output_dir / self._metadata_name()
 
         try:
             if self.api_mode == "completion":
-                downloaded_path, response = self.run_completion(job)
+                downloaded_path, response = self.run_completion(
+                    job,
+                    source_audio_path=source_audio_path,
+                    task_type=task_type,
+                    cover_strength=cover_strength,
+                )
                 metadata = {
                     "provider": self.name,
                     "api_mode": self.api_mode,
+                    "task_type": task_type,
+                    "source_audio_path": str(source_audio_path) if source_audio_path else None,
                     "response_id": response.get("id"),
                     "response": self._without_audio_blob(response),
                     "downloaded_path": str(downloaded_path),
@@ -75,6 +100,9 @@ class AceStepApiProvider(SongProvider):
                     metadata_path=metadata_path,
                     message="ACE-Step completion API generated audio successfully.",
                 )
+
+            if source_audio_path:
+                raise AceStepApiError("Audio upload mode currently requires AceMusic completion API mode.")
 
             task_id = self.release_task(job)
             task_result = self.wait_for_task(task_id)
@@ -110,15 +138,36 @@ class AceStepApiProvider(SongProvider):
     def health(self) -> dict[str, Any]:
         return self._request_json("GET", "/health")
 
-    def run_completion(self, job: SongJob) -> tuple[Path, dict[str, Any]]:
+    def run_completion(
+        self,
+        job: SongJob,
+        source_audio_path: Path | None = None,
+        task_type: str = "text2music",
+        cover_strength: float | None = None,
+    ) -> tuple[Path, dict[str, Any]]:
         model = self._completion_model_id(self.model)
         content = f"<prompt>{job.prompt}</prompt>"
         if job.lyrics:
             content += f"<lyrics>{job.lyrics}</lyrics>"
 
+        if source_audio_path:
+            audio_format = source_audio_path.suffix.lstrip(".").lower() or "mp3"
+            audio_b64 = base64.b64encode(source_audio_path.read_bytes()).decode("ascii")
+            messages: list[dict[str, Any]] = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": content},
+                        {"type": "input_audio", "input_audio": {"data": audio_b64, "format": audio_format}},
+                    ],
+                }
+            ]
+        else:
+            messages = [{"role": "user", "content": content}]
+
         payload: dict[str, Any] = {
             "model": model,
-            "messages": [{"role": "user", "content": content}],
+            "messages": messages,
             "stream": False,
             "thinking": self.thinking,
             "use_format": self.use_format,
@@ -131,6 +180,10 @@ class AceStepApiProvider(SongProvider):
                 "duration": job.duration_seconds,
             },
         }
+        if source_audio_path:
+            payload["task_type"] = task_type or "cover"
+        if cover_strength is not None:
+            payload["audio_cover_strength"] = cover_strength
         if job.seed is not None:
             payload["seed"] = job.seed
 
@@ -149,7 +202,8 @@ class AceStepApiProvider(SongProvider):
             raise AceStepApiError(f"Completion audio item missing audio_url: {self._without_audio_blob(response)}")
 
         suffix = self.audio_format.lstrip(".") or "mp3"
-        output_path = job.output_dir / f"ace-step-{response.get('id', self._timestamp())}.{suffix}"
+        safe_id = str(response.get("id") or self._timestamp()).replace("/", "-")
+        output_path = job.output_dir / f"ace-step-{safe_id}.{suffix}"
         self._save_audio_data_url(audio_url, output_path)
         return output_path, response
 
