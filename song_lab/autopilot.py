@@ -24,6 +24,7 @@ CREATIVE_ANGLES = [
         "title": "Masculine aura / identity pride",
         "dna": "deep male chant, oud/qanbus hit, low cinematic drums, claps, proud identity, heroic hook, strong first 3 seconds, slowed-edit friendly",
         "mood": "proud, masculine, serious, noble, motivational",
+        "notes": "Oud/qanbus opening hit, low cinematic drums, firm claps, deep male lead, male response chants, clean 15-second hook loop.",
     },
     {
         "key": "cold_guitar_memory",
@@ -31,6 +32,7 @@ CREATIVE_ANGLES = [
         "title": "Cold guitar / memory pain",
         "dna": "cold acoustic guitar with oud, intimate vocal, rainy nostalgia, moody bass, sad but beautiful hook, lyric-overlay friendly",
         "mood": "sad, intimate, nostalgic, human, cinematic",
+        "notes": "Soft acoustic guitar blended with oud, warm bass, sparse frame drum, rainy pad, vocal enters early, no long intro.",
     },
     {
         "key": "desert_waltz_hypnosis",
@@ -38,6 +40,7 @@ CREATIVE_ANGLES = [
         "title": "Hypnotic desert waltz",
         "dna": "hypnotic 6/8 or 3/4 sway, plucked oud/qanbus ostinato, vintage desert mystery, warm haze, loopable slowed-edit groove",
         "mood": "mysterious, elegant, nostalgic, hypnotic",
+        "notes": "Looping qanbus/oud motif, 6/8 sway, deep bass drone, brushed percussion, warm haze, cinematic desert atmosphere.",
     },
     {
         "key": "dream_slow_edit",
@@ -45,6 +48,7 @@ CREATIVE_ANGLES = [
         "title": "Dreamy slow edit",
         "dna": "minimal dreamy groove, soft haze, simple phrase repetition, deep space, warm bass, good for slow-motion edits",
         "mood": "dreamy, late-night, smooth, nostalgic",
+        "notes": "Minimal drums, airy pads, deep bass, sparse oud phrases, strong hook pocket, good at 0.85x slowed speed.",
     },
     {
         "key": "warm_pop_dedication",
@@ -52,6 +56,7 @@ CREATIVE_ANGLES = [
         "title": "Warm Arabic pop dedication",
         "dna": "warm Arabic pop melody, sweet chorus, polished percussion, bright oud color, family-friendly dedication, replayable hook",
         "mood": "warm, catchy, emotional, bright",
+        "notes": "Bright oud, soft pop drums, claps, strings lift, polished Arabic pop hook, warm vocal tone, family-friendly mix.",
     },
     {
         "key": "wedding_story",
@@ -59,6 +64,7 @@ CREATIVE_ANGLES = [
         "title": "Wedding / celebration story",
         "dna": "name shoutout, claps, Yemeni wedding pulse, group response, joy, family pride, social sharing energy",
         "mood": "joyful, celebratory, rhythmic, shareable",
+        "notes": "Yemeni wedding rhythm, hand drums, claps, group response, bright oud, short name shoutout, danceable but clean.",
     },
     {
         "key": "meme_majlis",
@@ -66,16 +72,12 @@ CREATIVE_ANGLES = [
         "title": "Meme majlis entrance",
         "dna": "funny serious delivery, Gulf/Yemeni claps, exaggerated entrance aura, short punchline hook, clean meme story energy",
         "mood": "funny, confident, playful, dramatic",
+        "notes": "Dramatic clap entrance, playful percussion, serious vocal delivery for comedy contrast, short punchline hook, no childish vocals.",
     },
 ]
 
 
 def build_autopilot_plan(payload: dict[str, Any]) -> dict[str, Any]:
-    """Create a fresh song plan.
-
-    If AUTOPILOT_API_KEY is configured, use an OpenAI-compatible chat-completions API.
-    Otherwise use randomized local planning so the product still varies and does not collapse into one style.
-    """
     user_idea = str(payload.get("idea") or "").strip()
     name = str(payload.get("name") or _extract_name(user_idea) or "محمد علي الفقي").strip()
     city = str(payload.get("city") or _extract_city(user_idea) or "رداع").strip()
@@ -93,7 +95,6 @@ def build_autopilot_plan(payload: dict[str, Any]) -> dict[str, Any]:
             fallback["planner"] = "fallback_after_llm_error"
             fallback["planner_error"] = str(exc)[:220]
             return fallback
-
     return _fallback_plan(user_idea=user_idea, name=name, city=city, mode=mode, avoid=avoid)
 
 
@@ -104,8 +105,8 @@ def _llm_plan(user_idea: str, name: str, city: str, mode: str, avoid: list[Any],
         "You are a senior Arabic/Yemeni music creative director for short-form social content. "
         "Return only valid JSON. Create a fresh original song plan, not a template. "
         "Use broad style patterns only. Do not copy or imitate any real artist voice, melody, lyrics, beat, riff, chord progression, hook, or arrangement. "
-        "Make every plan meaningfully different from avoid[]. Arabic lyrics should be natural, emotional, and singable. "
-        "Prioritize short hooks, names/cities early, story shareability, slowed-edit rhythm, and IG/Snap/TikTok usability."
+        "Every plan must be meaningfully different from avoid_previous_outputs. Arabic lyrics must be natural, singable, short, and emotionally clear. "
+        "Prioritize name/city in the first 3 seconds, strong rhythm, slowed-edit potential, and IG/Snap/TikTok usability."
     )
     schema_hint = {
         "planner": "llm",
@@ -141,7 +142,10 @@ def _llm_plan(user_idea: str, name: str, city: str, mode: str, avoid: list[Any],
             ),
         },
     ]
-    body = json.dumps({"model": model, "messages": messages, "temperature": 0.95, "response_format": {"type": "json_object"}}, ensure_ascii=False).encode("utf-8")
+    body = json.dumps(
+        {"model": model, "messages": messages, "temperature": 0.95, "response_format": {"type": "json_object"}},
+        ensure_ascii=False,
+    ).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="POST")
     req.add_header("Content-Type", "application/json")
     req.add_header("Authorization", f"Bearer {api_key}")
@@ -154,14 +158,14 @@ def _llm_plan(user_idea: str, name: str, city: str, mode: str, avoid: list[Any],
 
 
 def _fallback_plan(user_idea: str, name: str, city: str, mode: str, avoid: list[Any]) -> dict[str, Any]:
-    seed = f"{user_idea}|{name}|{city}|{mode}|{time.time_ns()}"
-    rng = random.Random(seed)
+    rng = random.Random(f"{user_idea}|{name}|{city}|{mode}|{time.time_ns()}")
     candidates = [dict(x) for x in CREATIVE_ANGLES]
     avoid_text = " ".join(json.dumps(x, ensure_ascii=False).lower() for x in avoid[-8:])
     for item in candidates:
         item["weight"] = 10
         if item["key"] in avoid_text or item["title"].lower() in avoid_text:
             item["weight"] = 1
+
     lower = user_idea.lower()
     if mode in {"meme", "funny"} or re.search(r"meme|funny|roast|ضحك|مزح|نكت", lower):
         _boost(candidates, "meme_majlis", 12)
@@ -180,8 +184,7 @@ def _fallback_plan(user_idea: str, name: str, city: str, mode: str, avoid: list[
         _boost(candidates, "meme_majlis", 3)
 
     angle = rng.choices(candidates, weights=[x["weight"] for x in candidates], k=1)[0]
-    hook_bank = _hook_bank(name, city, angle["key"])
-    hook = rng.choice(hook_bank)
+    hook = rng.choice(_hook_bank(name, city, angle["key"]))
     lyrics = _fresh_lyrics(rng, name=name, city=city, hook=hook, key=angle["key"])
     caption = rng.choice([
         f"سويت أغنية باسم {name} من {city} 🔥 مين أسوي له بعد؟",
@@ -190,12 +193,12 @@ def _fallback_plan(user_idea: str, name: str, city: str, mode: str, avoid: list[
     ])
     plan = {
         "planner": "fallback_randomized",
-        "style": angle["style"],
-        "creative_angle": angle["title"],
-        "mood": angle["mood"],
-        "trend_dna": angle["dna"],
-        "instrumental_notes": angle["notes"],
-        "concept": f"A fully original Arabic/Yemeni 45-second social-story song about {name} from {city}. User idea: {user_idea}. The creative angle is {angle['title']}. Make the first line personal and the hook easy to remember after one listen.",
+        "style": angle.get("style", "arabic_cinematic_epic"),
+        "creative_angle": angle.get("title", "Fresh Arabic/Yemeni hook"),
+        "mood": angle.get("mood", "emotional, catchy, social-story ready"),
+        "trend_dna": angle.get("dna", "name early, strong hook, Arabic/Yemeni identity, edit-friendly rhythm"),
+        "instrumental_notes": angle.get("notes", "Oud/qanbus, claps, warm bass, clear rhythm, strong hook drop, human Arabic vocal."),
+        "concept": f"A fully original Arabic/Yemeni 45-second social-story song about {name} from {city}. User idea: {user_idea}. Creative angle: {angle.get('title', 'fresh hook')}. Make the first line personal and the hook easy to remember after one listen.",
         "lyrics": lyrics,
         "caption": caption,
         "hashtags": ["#اليمن", f"#{city.replace(' ', '_')}", "#اغاني_عربية", "#AImusic", "#سناب", "#انستقرام", "#تيك_توك"],
@@ -213,11 +216,14 @@ def _fallback_plan(user_idea: str, name: str, city: str, mode: str, avoid: list[
 
 
 def _normalize_plan(plan: dict[str, Any], name: str, city: str, planner: str) -> dict[str, Any]:
-    plan = dict(plan)
+    plan = dict(plan or {})
     plan["planner"] = plan.get("planner") or planner
     if plan.get("style") not in STYLE_KEYS:
         plan["style"] = "arabic_cinematic_epic"
-    plan["duration"] = int(plan.get("duration") or 45)
+    try:
+        plan["duration"] = int(plan.get("duration") or 45)
+    except Exception:
+        plan["duration"] = 45
     if plan["duration"] < 15 or plan["duration"] > 90:
         plan["duration"] = 45
     plan.setdefault("creative_angle", "Fresh Arabic/Yemeni social hook")
@@ -238,8 +244,8 @@ def _normalize_plan(plan: dict[str, Any], name: str, city: str, planner: str) ->
 
 def _boost(items: list[dict[str, Any]], key: str, amount: int) -> None:
     for item in items:
-        if item["key"] == key:
-            item["weight"] += amount
+        if item.get("key") == key:
+            item["weight"] = int(item.get("weight", 0)) + amount
 
 
 def _hook_bank(name: str, city: str, key: str) -> list[str]:
@@ -266,7 +272,7 @@ def _fresh_lyrics(rng: random.Random, name: str, city: str, hook: str, key: str)
         "dream_slow_edit": ["العود بعيد والصوت قريب", "والقلب يعرف معنى النصيب", "ما يحتاج يرفع صوته كثير", "الهيبة تظهر في الطريق"],
         "aura_pride": ["يا ولد الأصل والطيب معروف", "قلبك ثابت وقت الظروف", "ما تهزك ريح ولا ليل ثقيل", "عزمك العالي دايمًا لك دليل"],
     }
-    lines = verse_lines.get(key, verse_lines["aura_pride"])
+    lines = list(verse_lines.get(key, verse_lines["aura_pride"]))
     rng.shuffle(lines)
     return f"[Intro]\n{name} من {city}\n{hook}\n\n[Hook]\n{hook}\n{name} من {city} والهيبة معاه\nخطوة ثابتة، قلبه دليل\nوالناس تسمع يوم يناداه\n\n[Verse]\n{lines[0]}\n{lines[1]}\n{lines[2]}\n{lines[3]}\n\n[Hook Repeat]\n{hook}\n{name} من {city} والهيبة معاه\nخطوة ثابتة، قلبه دليل\nوالناس تسمع يوم يناداه"
 
