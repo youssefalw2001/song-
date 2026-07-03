@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from song_lab.api.schemas import AceGenerateRequest, GenerateRequest, ImproveRequest, ScoreRequest, TextAceGenerateRequest, TextPackageRequest
 from song_lab.audio.jobs import SongJob, SongJobResult
+from song_lab.autopilot import build_autopilot_plan
 from song_lab.improve import improve_package
 from song_lab.pipeline import build_conversion_package
 from song_lab.presets import STYLE_PRESETS
@@ -30,41 +31,11 @@ OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 TREND_STYLE_DNA = {
-    "golden_brown_desert_waltz": {
-        "label": "Golden Brown-type desert waltz pattern",
-        "profile": "sad_oud_guitar",
-        "score": 91,
-        "dna": "hypnotic 6/8 or 3/4 sway, harpsichord-like plucked oud/qanbus idea, mysterious minor mood, elegant loop, slow cinematic movement, extremely good for slowed edits",
-        "safe_note": "Use only broad mood/texture/rhythm feel. Do not copy melody, chords, riff, or arrangement.",
-    },
-    "sweater_weather_cold_guitar": {
-        "label": "Sweater Weather-type cold guitar indie pattern",
-        "profile": "sad_oud_guitar",
-        "score": 88,
-        "dna": "cold-night guitar, intimate verse, nostalgic hook, moody bass, emotional but simple chorus, works for lyric overlays and rainy edits",
-        "safe_note": "Use broad cold indie mood only. Do not copy melody, lyrics, chord progression, guitar riff, or topline.",
-    },
-    "master_of_none_slow_dream": {
-        "label": "Master of None-type dreamy slow edit pattern",
-        "profile": "dark_rnb_yemeni",
-        "score": 89,
-        "dna": "minimal dreamy groove, soft psychedelic atmosphere, loose slow pocket, warm haze, simple repeatable phrase, good for slow-motion nostalgia edits",
-        "safe_note": "Use broad dreamy/minimal atmosphere only. Do not copy the song, chords, melody, or vocal phrasing.",
-    },
-    "nancy_ajram_pop_warmth": {
-        "label": "Nancy Ajram-type warm Arabic pop pattern",
-        "profile": "wedding_name",
-        "score": 86,
-        "dna": "warm Arabic pop brightness, catchy clean chorus, family-friendly emotion, elegant percussion, sweet melodic lift, easy replay value",
-        "safe_note": "Use broad Arabic pop warmth only. Do not clone any singer voice, melody, lyrics, or arrangement.",
-    },
-    "masculine_yemeni_nasheed_edit": {
-        "label": "Masculine Yemeni nasheed edit pattern",
-        "profile": "nasheed_power",
-        "score": 93,
-        "dna": "deep male chant, name in first 3 seconds, low drums, claps, oud/qanbus motif, heroic identity, perfect for car/gym/mountain edits",
-        "safe_note": "Fully original chant and melody only.",
-    },
+    "golden_brown_desert_waltz": {"label": "Golden Brown-type desert waltz pattern", "profile": "sad_oud_guitar", "score": 91, "dna": "hypnotic 6/8 or 3/4 sway, plucked oud/qanbus idea, mysterious minor mood, elegant loop, slow cinematic movement, good for slowed edits", "safe_note": "Use broad mood/texture/rhythm feel only."},
+    "sweater_weather_cold_guitar": {"label": "Sweater Weather-type cold guitar indie pattern", "profile": "sad_oud_guitar", "score": 88, "dna": "cold-night guitar, intimate verse, nostalgic hook, moody bass, emotional simple chorus", "safe_note": "Use broad cold indie mood only."},
+    "master_of_none_slow_dream": {"label": "Master of None-type dreamy slow edit pattern", "profile": "dark_rnb_yemeni", "score": 89, "dna": "minimal dreamy groove, soft psychedelic atmosphere, loose slow pocket, warm haze, simple repeatable phrase", "safe_note": "Use broad dreamy/minimal atmosphere only."},
+    "nancy_ajram_pop_warmth": {"label": "Nancy Ajram-type warm Arabic pop pattern", "profile": "wedding_name", "score": 86, "dna": "warm Arabic pop brightness, catchy clean chorus, family-friendly emotion, elegant percussion", "safe_note": "Use broad Arabic pop warmth only."},
+    "masculine_yemeni_nasheed_edit": {"label": "Masculine Yemeni nasheed edit pattern", "profile": "nasheed_power", "score": 93, "dna": "deep male chant, name early, low drums, claps, oud/qanbus motif, heroic identity", "safe_note": "Fully original chant and melody only."},
 }
 
 LIVE_TREND_URLS = [
@@ -78,7 +49,7 @@ def _allowed_origins() -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-app = FastAPI(title="Arabic Song Conversion Lab", version="0.6.0")
+app = FastAPI(title="Arabic Song Conversion Lab", version="0.7.0")
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 
 app.add_middleware(
@@ -114,39 +85,24 @@ def home() -> FileResponse:
 
 @app.get("/health")
 def health() -> dict:
-    return {
-        "status": "ok",
-        "cors_allow_origins": _allowed_origins(),
-        "frontend": FRONTEND_INDEX.exists(),
-        "outputs": OUTPUTS_DIR.exists(),
-        "uploads": UPLOADS_DIR.exists(),
-    }
+    return {"status": "ok", "cors_allow_origins": _allowed_origins(), "frontend": FRONTEND_INDEX.exists(), "outputs": OUTPUTS_DIR.exists(), "uploads": UPLOADS_DIR.exists(), "autopilot_api_configured": bool(os.getenv("AUTOPILOT_API_KEY") or os.getenv("OPENAI_API_KEY"))}
 
 
 @app.get("/styles")
 def list_styles() -> dict:
-    return {
-        "styles": [
-            {
-                "key": key,
-                "title": preset.title,
-                "tempo_bpm": preset.tempo_bpm,
-                "mood": preset.mood,
-                "instruments": preset.instruments,
-            }
-            for key, preset in sorted(STYLE_PRESETS.items())
-        ]
-    }
+    return {"styles": [{"key": key, "title": preset.title, "tempo_bpm": preset.tempo_bpm, "mood": preset.mood, "instruments": preset.instruments} for key, preset in sorted(STYLE_PRESETS.items())]}
+
+
+@app.post("/autopilot/plan")
+def autopilot_plan(request: dict) -> dict:
+    try:
+        return build_autopilot_plan(request)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/trends/live")
 def live_trend_scan() -> dict:
-    """Best-effort public trend scan plus locked safe style DNA.
-
-    TikTok trend data is restricted and can fail from server environments. This endpoint never blocks
-    the product: it attempts public pages, extracts broad keywords, then falls back to proven edit-safe
-    style patterns without copying any real song or artist.
-    """
     sources: list[dict] = []
     combined = ""
     for url in LIVE_TREND_URLS:
@@ -158,30 +114,16 @@ def live_trend_scan() -> dict:
             combined += "\n" + text.lower()
             item["ok"] = True
             item["matches"] = _extract_trend_terms(text)
-        except Exception as exc:  # best effort only
+        except Exception as exc:
             item["error"] = str(exc)[:160]
         sources.append(item)
-
     suggestion = _choose_trend_profile(combined)
-    return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "status": "live_scan_ok" if any(s.get("ok") for s in sources) else "fallback_patterns_only",
-        "suggested_profile": suggestion["profile"],
-        "suggested_pattern_key": suggestion["key"],
-        "suggested_pattern": suggestion,
-        "locked_style_dna": TREND_STYLE_DNA,
-        "sources": sources,
-        "originality_guardrail": "Create a fully original song. Do not copy melodies, lyrics, chord progressions, beats, riffs, arrangements, voices, or artist likenesses.",
-    }
+    return {"generated_at": datetime.now(timezone.utc).isoformat(), "status": "live_scan_ok" if any(s.get("ok") for s in sources) else "fallback_patterns_only", "suggested_profile": suggestion["profile"], "suggested_pattern_key": suggestion["key"], "suggested_pattern": suggestion, "locked_style_dna": TREND_STYLE_DNA, "sources": sources, "originality_guardrail": "Create a fully original song. Do not copy melodies, lyrics, chord progressions, beats, riffs, arrangements, voices, or artist likenesses."}
 
 
 def _extract_trend_terms(text: str) -> list[str]:
     lowered = re.sub(r"<[^>]+>", " ", text.lower())
-    phrases = [
-        "slowed", "speed up", "sped up", "edit", "nostalgia", "2016", "guitar",
-        "indie", "r&b", "arabic", "dance", "wedding", "viral", "golden brown",
-        "sweater weather", "master of none", "nancy", "oud", "remix", "capcut",
-    ]
+    phrases = ["slowed", "speed up", "sped up", "edit", "nostalgia", "2016", "guitar", "indie", "r&b", "arabic", "dance", "wedding", "viral", "golden brown", "sweater weather", "master of none", "nancy", "oud", "remix", "capcut"]
     found = []
     for phrase in phrases:
         if phrase in lowered and phrase not in found:
@@ -196,13 +138,7 @@ def _extract_trend_terms(text: str) -> list[str]:
 
 def _choose_trend_profile(text: str) -> dict:
     scores: dict[str, int] = {key: int(value["score"]) for key, value in TREND_STYLE_DNA.items()}
-    boosts = {
-        "golden_brown_desert_waltz": ["golden brown", "waltz", "hypnotic", "nostalgia", "slowed"],
-        "sweater_weather_cold_guitar": ["sweater weather", "guitar", "indie", "cold", "2016", "nostalgia"],
-        "master_of_none_slow_dream": ["master of none", "dream", "psychedelic", "slow", "lo-fi", "edit"],
-        "nancy_ajram_pop_warmth": ["nancy", "arabic", "pop", "dance", "wedding"],
-        "masculine_yemeni_nasheed_edit": ["nasheed", "arabic", "edit", "slowed", "oud", "yemeni"],
-    }
+    boosts = {"golden_brown_desert_waltz": ["golden brown", "waltz", "hypnotic", "nostalgia", "slowed"], "sweater_weather_cold_guitar": ["sweater weather", "guitar", "indie", "cold", "2016", "nostalgia"], "master_of_none_slow_dream": ["master of none", "dream", "psychedelic", "slow", "lo-fi", "edit"], "nancy_ajram_pop_warmth": ["nancy", "arabic", "pop", "dance", "wedding"], "masculine_yemeni_nasheed_edit": ["nasheed", "arabic", "edit", "slowed", "oud", "yemeni"]}
     for key, words in boosts.items():
         for word in words:
             if word in text:
@@ -239,31 +175,13 @@ def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
     data = package.model_dump()
     if request.lyrics.strip():
         data["lyric_adaptation_prompt"] = request.lyrics.strip()
-    provider = AceStepApiProvider(
-        base_url=request.base_url,
-        api_key=request.api_key,
-        model=request.model,
-        audio_format=request.audio_format,
-        vocal_language=request.vocal_language,
-    )
+    provider = AceStepApiProvider(base_url=request.base_url, api_key=request.api_key, model=request.model, audio_format=request.audio_format, vocal_language=request.vocal_language)
     result = provider.run(_job_from_package(data, request.output_dir, request.duration))
     return {"package": data, "generation": _result_with_url(result)}
 
 
 @app.post("/generate/from-audio/ace")
-def generate_from_audio_ace(
-    audio: UploadFile = File(...),
-    prompt: str = Form(...),
-    lyrics: str = Form(""),
-    duration: int = Form(120),
-    base_url: str = Form("https://api.acemusic.ai"),
-    api_key: str = Form(""),
-    model: str = Form("acestep-v15-turbo"),
-    audio_format: str = Form("mp3"),
-    vocal_language: str = Form("ar"),
-    task_type: str = Form("cover"),
-    cover_strength: float = Form(0.55),
-) -> dict:
+def generate_from_audio_ace(audio: UploadFile = File(...), prompt: str = Form(...), lyrics: str = Form(""), duration: int = Form(120), base_url: str = Form("https://api.acemusic.ai"), api_key: str = Form(""), model: str = Form("acestep-v15-turbo"), audio_format: str = Form("mp3"), vocal_language: str = Form("ar"), task_type: str = Form("cover"), cover_strength: float = Form(0.55)) -> dict:
     allowed_suffixes = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
     original_name = Path(audio.filename or "source_audio.mp3").name
     suffix = Path(original_name).suffix.lower() or ".mp3"
@@ -271,35 +189,14 @@ def generate_from_audio_ace(
         raise HTTPException(status_code=400, detail=f"Unsupported audio type: {suffix}")
     if duration < 10 or duration > 600:
         raise HTTPException(status_code=400, detail="Duration must be between 10 and 600 seconds")
-
     safe_name = f"source-{os.urandom(8).hex()}{suffix}"
     upload_path = UPLOADS_DIR / safe_name
     with upload_path.open("wb") as handle:
         shutil.copyfileobj(audio.file, handle)
-
-    job = SongJob(
-        prompt=prompt.strip(),
-        lyrics=lyrics.strip(),
-        output_dir=OUTPUTS_DIR / "audio",
-        duration_seconds=duration,
-    )
-    provider = AceStepApiProvider(
-        base_url=base_url,
-        api_key=api_key or None,
-        model=model,
-        audio_format=audio_format,
-        vocal_language=vocal_language,
-    )
-    result = provider.run_with_audio(
-        job=job,
-        source_audio_path=upload_path,
-        task_type=task_type,
-        cover_strength=cover_strength,
-    )
-    return {
-        "source_audio": {"filename": original_name, "stored_path": str(upload_path)},
-        "generation": _result_with_url(result),
-    }
+    job = SongJob(prompt=prompt.strip(), lyrics=lyrics.strip(), output_dir=OUTPUTS_DIR / "audio", duration_seconds=duration)
+    provider = AceStepApiProvider(base_url=base_url, api_key=api_key or None, model=model, audio_format=audio_format, vocal_language=vocal_language)
+    result = provider.run_with_audio(job=job, source_audio_path=upload_path, task_type=task_type, cover_strength=cover_strength)
+    return {"source_audio": {"filename": original_name, "stored_path": str(upload_path)}, "generation": _result_with_url(result)}
 
 
 @app.post("/generate/mock")
@@ -313,30 +210,14 @@ def generate_mock(request: GenerateRequest) -> dict:
 @app.post("/generate/ace")
 def generate_ace(request: AceGenerateRequest) -> dict:
     package_data = _read_package(request.package_path)
-    provider = AceStepApiProvider(
-        base_url=request.base_url,
-        api_key=request.api_key,
-        model=request.model,
-        audio_format=request.audio_format,
-        vocal_language=request.vocal_language,
-    )
+    provider = AceStepApiProvider(base_url=request.base_url, api_key=request.api_key, model=request.model, audio_format=request.audio_format, vocal_language=request.vocal_language)
     result = provider.run(_job_from_package(package_data, request.output_dir, request.duration))
     return _result_with_url(result)
 
 
 @app.post("/score")
 def score_version(request: ScoreRequest) -> dict:
-    score = VersionScore(
-        artifact_path=request.artifact,
-        version_label=request.version_label,
-        emotion=request.emotion,
-        yemeni_identity=request.yemeni_identity,
-        vocal_beauty=request.vocal_beauty,
-        lyrics=request.lyrics,
-        instrumental=request.instrumental,
-        replay_value=request.replay_value,
-        notes=request.notes,
-    )
+    score = VersionScore(artifact_path=request.artifact, version_label=request.version_label, emotion=request.emotion, yemeni_identity=request.yemeni_identity, vocal_beauty=request.vocal_beauty, lyrics=request.lyrics, instrumental=request.instrumental, replay_value=request.replay_value, notes=request.notes)
     scorebook = append_score(score, request.scorebook)
     return {"score": score.to_record(), "best": scorebook.get("best")}
 
@@ -353,11 +234,7 @@ def improve(request: ImproveRequest) -> dict:
 def _package_from_text_request(text: str, style: str, source_label: str):
     if style not in STYLE_PRESETS:
         raise HTTPException(status_code=400, detail=f"Unknown style: {style}")
-    source_text = (
-        f"Source label: {source_label}\n\n"
-        "Treat this as extracted song material. Preserve the emotional meaning, not exact wording.\n\n"
-        f"{text.strip()}"
-    )
+    source_text = f"Source label: {source_label}\n\nTreat this as extracted song material. Preserve the emotional meaning, not exact wording.\n\n{text.strip()}"
     return build_conversion_package(source_text=source_text, style_key=style)
 
 
