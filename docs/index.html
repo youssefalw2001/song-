@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Arabic Song Conversion Lab</title>
   <style>
-    :root{--bg:#100b07;--panel:#1c130d;--text:#fff4e6;--muted:#c9aa83;--gold:#e5aa48;--gold2:#ffd37a;--border:#4a321d;--ok:#90ee90;--bad:#ff8a8a}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,#44270f 0,#100b07 42rem);color:var(--text);line-height:1.5}.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 70px}.badge{color:var(--gold2);letter-spacing:.15em;text-transform:uppercase;font-size:12px;font-weight:900}h1{margin:8px 0;font-size:clamp(32px,6vw,64px);line-height:.96}.lead,.note,.status{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr .9fr;gap:18px}@media(max-width:850px){.grid{grid-template-columns:1fr}}.card{background:rgba(28,19,13,.92);border:1px solid var(--border);border-radius:22px;padding:18px}label{display:block;font-weight:900;margin:14px 0 8px}select,textarea,input{width:100%;border:1px solid var(--border);border-radius:14px;background:#0d0906;color:var(--text);padding:12px 13px;font:inherit}textarea{min-height:145px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:620px){.row{grid-template-columns:1fr}}button{border:0;border-radius:14px;padding:12px 15px;font-weight:900;cursor:pointer;color:#1a1007;background:linear-gradient(135deg,var(--gold),var(--gold2))}button.secondary{background:#2d2118;color:var(--text);border:1px solid var(--border)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}pre{white-space:pre-wrap;word-break:break-word;background:#090604;border:1px solid var(--border);border-radius:16px;padding:14px;max-height:560px;overflow:auto;color:#ffe8bf}.ok{color:var(--ok);font-weight:900}.bad{color:var(--bad);font-weight:900}.small{font-size:13px}
+    :root{--bg:#100b07;--panel:#1c130d;--text:#fff4e6;--muted:#c9aa83;--gold:#e5aa48;--gold2:#ffd37a;--border:#4a321d;--ok:#90ee90;--bad:#ff8a8a}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,#44270f 0,#100b07 42rem);color:var(--text);line-height:1.5}.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 70px}.badge{color:var(--gold2);letter-spacing:.15em;text-transform:uppercase;font-size:12px;font-weight:900}h1{margin:8px 0;font-size:clamp(32px,6vw,64px);line-height:.96}.lead,.note,.status{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr .9fr;gap:18px}@media(max-width:850px){.grid{grid-template-columns:1fr}}.card{background:rgba(28,19,13,.92);border:1px solid var(--border);border-radius:22px;padding:18px}label{display:block;font-weight:900;margin:14px 0 8px}select,textarea,input{width:100%;border:1px solid var(--border);border-radius:14px;background:#0d0906;color:var(--text);padding:12px 13px;font:inherit}textarea{min-height:145px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:620px){.row{grid-template-columns:1fr}}button{border:0;border-radius:14px;padding:12px 15px;font-weight:900;cursor:pointer;color:#1a1007;background:linear-gradient(135deg,var(--gold),var(--gold2))}button.secondary{background:#2d2118;color:var(--text);border:1px solid var(--border)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}pre{white-space:pre-wrap;word-break:break-word;background:#090604;border:1px solid var(--border);border-radius:16px;padding:14px;max-height:420px;overflow:auto;color:#ffe8bf}.ok{color:var(--ok);font-weight:900}.bad{color:var(--bad);font-weight:900}.small{font-size:13px}.player{display:none;margin:12px 0 16px;padding:12px;border:1px solid var(--border);border-radius:16px;background:#120c08}.player audio{width:100%;margin:8px 0}.player a{color:var(--gold2);font-weight:900}
   </style>
 </head>
 <body>
@@ -13,13 +13,13 @@
     <header>
       <div class="badge">Arabic Song Conversion Lab</div>
       <h1>Generate Arabic-style songs from the site.</h1>
-      <p class="lead">Frontend on GitHub Pages. Backend on Render. Paste your Render backend URL, test it, then generate.</p>
+      <p class="lead">Open this page from Render, check backend, test mock, then generate real audio.</p>
     </header>
 
     <section class="grid">
       <div class="card">
         <h2>Generator</h2>
-        <p class="note small">Backend URL must be your Render base URL, like <code>https://name.onrender.com</code>. Do not add <code>/health</code>.</p>
+        <p class="note small">When using the Render-hosted page, Backend URL should be this same Render base URL.</p>
 
         <label for="backend">Backend URL</label>
         <input id="backend" placeholder="https://your-service.onrender.com" />
@@ -64,32 +64,39 @@
       </div>
 
       <div class="card">
-        <h2>Result / Debug</h2>
-        <p class="note small">This now shows the exact request URL and browser error if connection fails.</p>
-        <pre id="output">Paste Render backend URL and click “Check backend”.</pre>
+        <h2>Result / Player</h2>
+        <div id="player" class="player">
+          <div class="ok">Audio ready.</div>
+          <audio id="audio" controls></audio>
+          <a id="audioLink" href="#" target="_blank" rel="noopener">Open audio file</a>
+        </div>
+        <p class="note small">If real generation succeeds, the player appears here.</p>
+        <pre id="output">Click “Check backend”, then “Generate real audio”.</pre>
       </div>
     </section>
   </main>
 
   <script>
     const styles={yemeni_oud_dream_pop:'Yemeni Oud Dream Pop',arabic_oud_ballad:'Arabic Oud Ballad',levantine_pop_ballad:'Levantine Pop Ballad',khaliji_gulf_pop:'Khaliji Gulf Pop',egyptian_shaabi_pop:'Egyptian Shaabi Pop',maghrebi_rai_fusion:'Maghrebi Rai Fusion',arabic_cinematic_epic:'Arabic Cinematic Epic'};
-    const style=document.getElementById('style'),out=document.getElementById('output'),statusEl=document.getElementById('status'),backendInput=document.getElementById('backend');
+    const style=document.getElementById('style'),out=document.getElementById('output'),statusEl=document.getElementById('status'),backendInput=document.getElementById('backend'),player=document.getElementById('player'),audio=document.getElementById('audio'),audioLink=document.getElementById('audioLink');
     for(const [k,v] of Object.entries(styles)){const o=document.createElement('option');o.value=k;o.textContent=`${v} (${k})`;style.appendChild(o)}
     style.value='yemeni_oud_dream_pop';
-    backendInput.value=localStorage.getItem('songLabBackend')||'';
-    backendInput.addEventListener('change',()=>localStorage.setItem('songLabBackend',backend()));
     function cleanUrl(v){return String(v||'').trim().replace(/\/+$/,'')}
-    function backend(){return cleanUrl(backendInput.value)}
-    function payload(){return{text:document.getElementById('idea').value,lyrics:document.getElementById('lyrics').value,style:style.value,source_label:'github_pages_site',duration:Number(document.getElementById('duration').value||90),base_url:cleanUrl(document.getElementById('engine').value),model:document.getElementById('model').value.trim(),audio_format:document.getElementById('format').value.trim(),vocal_language:document.getElementById('language').value.trim(),output_dir:'outputs/audio'}}
+    function defaultBackend(){return cleanUrl(location.origin)}
+    function backend(){return cleanUrl(backendInput.value)||defaultBackend()}
+    backendInput.value=localStorage.getItem('songLabBackend')||defaultBackend();
+    backendInput.addEventListener('change',()=>localStorage.setItem('songLabBackend',backend()));
+    function payload(){return{text:document.getElementById('idea').value,lyrics:document.getElementById('lyrics').value,style:style.value,source_label:'render_site',duration:Number(document.getElementById('duration').value||90),base_url:cleanUrl(document.getElementById('engine').value),model:document.getElementById('model').value.trim(),audio_format:document.getElementById('format').value.trim(),vocal_language:document.getElementById('language').value.trim(),output_dir:'outputs/audio'}}
     function show(x){out.textContent=typeof x==='string'?x:JSON.stringify(x,null,2)}
     function setStatus(x,ok=false){statusEl.innerHTML=ok?`<span class="ok">${x}</span>`:`<span>${x}</span>`}
-    async function get(path){const url=`${backend()}${path}`;show(`Requesting:\n${url}`);try{const res=await fetch(url,{cache:'no-store'});const text=await res.text();let data;try{data=JSON.parse(text)}catch{data=text}if(!res.ok)throw new Error(`HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);return data}catch(e){throw new Error(`Could not reach backend.\n\nRequest URL:\n${url}\n\nBrowser error:\n${e.message}\n\nCheck: backend URL must start with https:// and must not include /health.`)}}
-    async function post(path,body){const url=`${backend()}${path}`;show(`Requesting:\n${url}`);try{const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});const text=await res.text();let data;try{data=JSON.parse(text)}catch{data=text}if(!res.ok)throw new Error(`HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);return data}catch(e){throw new Error(`Request failed.\n\nRequest URL:\n${url}\n\nBrowser error:\n${e.message}`)}}
+    function maybeShowAudio(data){const gen=data&&data.generation?data.generation:data;if(gen&&gen.audio_url){const absolute=new URL(gen.audio_url,backend()).href;audio.src=absolute;audioLink.href=absolute;player.style.display='block';audio.load();return true}player.style.display='none';audio.removeAttribute('src');return false}
+    async function get(path){const url=`${backend()}${path}`;show(`Requesting:\n${url}`);const res=await fetch(url,{cache:'no-store'});const text=await res.text();let data;try{data=JSON.parse(text)}catch{data=text}if(!res.ok)throw new Error(`HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);return data}
+    async function post(path,body){const url=`${backend()}${path}`;show(`Requesting:\n${url}`);const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});const text=await res.text();let data;try{data=JSON.parse(text)}catch{data=text}if(!res.ok)throw new Error(`HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);return data}
     document.getElementById('check').onclick=async()=>{try{setStatus('Checking backend...');localStorage.setItem('songLabBackend',backend());const data=await get('/health');show(data);setStatus('Backend connected.',true)}catch(e){show(String(e));setStatus('Backend not reachable.')}};
     document.getElementById('stylesBtn').onclick=async()=>{try{setStatus('Checking styles...');const data=await get('/styles');show(data);setStatus('Styles loaded.',true)}catch(e){show(String(e));setStatus('Styles check failed.')}};
-    document.getElementById('packageBtn').onclick=async()=>{try{setStatus('Building package...');const data=await post('/package/from-text',{text:payload().text,style:payload().style,source_label:'github_pages_site'});show(data);setStatus('Package built.',true)}catch(e){show(String(e));setStatus('Package failed.')}};
-    document.getElementById('mockBtn').onclick=async()=>{try{setStatus('Running mock generation...');const data=await post('/generate/from-text/mock',payload());show(data);setStatus('Mock generation complete.',true)}catch(e){show(String(e));setStatus('Mock failed.')}};
-    document.getElementById('realBtn').onclick=async()=>{try{setStatus('Generating real audio...');const data=await post('/generate/from-text/ace',payload());show(data);setStatus('Generation finished.',true)}catch(e){show(String(e));setStatus('Real generation failed.')}};
+    document.getElementById('packageBtn').onclick=async()=>{try{setStatus('Building package...');const data=await post('/package/from-text',{text:payload().text,style:payload().style,source_label:'render_site'});show(data);setStatus('Package built.',true)}catch(e){show(String(e));setStatus('Package failed.')}};
+    document.getElementById('mockBtn').onclick=async()=>{try{setStatus('Running mock generation...');const data=await post('/generate/from-text/mock',payload());maybeShowAudio(data);show(data);setStatus('Mock generation complete.',true)}catch(e){show(String(e));setStatus('Mock failed.')}};
+    document.getElementById('realBtn').onclick=async()=>{try{setStatus('Generating real audio. Keep this tab open...');const data=await post('/generate/from-text/ace',payload());const hasAudio=maybeShowAudio(data);show(data);setStatus(hasAudio?'Generation finished. Press play.':'Generation returned no audio file.',hasAudio)}catch(e){show(String(e));setStatus('Real generation failed.')}};
   </script>
 </body>
 </html>
