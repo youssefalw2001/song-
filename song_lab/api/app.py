@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
+import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -26,13 +29,56 @@ UPLOADS_DIR = OUTPUTS_DIR / "uploads"
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
+TREND_STYLE_DNA = {
+    "golden_brown_desert_waltz": {
+        "label": "Golden Brown-type desert waltz pattern",
+        "profile": "sad_oud_guitar",
+        "score": 91,
+        "dna": "hypnotic 6/8 or 3/4 sway, harpsichord-like plucked oud/qanbus idea, mysterious minor mood, elegant loop, slow cinematic movement, extremely good for slowed edits",
+        "safe_note": "Use only broad mood/texture/rhythm feel. Do not copy melody, chords, riff, or arrangement.",
+    },
+    "sweater_weather_cold_guitar": {
+        "label": "Sweater Weather-type cold guitar indie pattern",
+        "profile": "sad_oud_guitar",
+        "score": 88,
+        "dna": "cold-night guitar, intimate verse, nostalgic hook, moody bass, emotional but simple chorus, works for lyric overlays and rainy edits",
+        "safe_note": "Use broad cold indie mood only. Do not copy melody, lyrics, chord progression, guitar riff, or topline.",
+    },
+    "master_of_none_slow_dream": {
+        "label": "Master of None-type dreamy slow edit pattern",
+        "profile": "dark_rnb_yemeni",
+        "score": 89,
+        "dna": "minimal dreamy groove, soft psychedelic atmosphere, loose slow pocket, warm haze, simple repeatable phrase, good for slow-motion nostalgia edits",
+        "safe_note": "Use broad dreamy/minimal atmosphere only. Do not copy the song, chords, melody, or vocal phrasing.",
+    },
+    "nancy_ajram_pop_warmth": {
+        "label": "Nancy Ajram-type warm Arabic pop pattern",
+        "profile": "wedding_name",
+        "score": 86,
+        "dna": "warm Arabic pop brightness, catchy clean chorus, family-friendly emotion, elegant percussion, sweet melodic lift, easy replay value",
+        "safe_note": "Use broad Arabic pop warmth only. Do not clone any singer voice, melody, lyrics, or arrangement.",
+    },
+    "masculine_yemeni_nasheed_edit": {
+        "label": "Masculine Yemeni nasheed edit pattern",
+        "profile": "nasheed_power",
+        "score": 93,
+        "dna": "deep male chant, name in first 3 seconds, low drums, claps, oud/qanbus motif, heroic identity, perfect for car/gym/mountain edits",
+        "safe_note": "Fully original chant and melody only.",
+    },
+}
+
+LIVE_TREND_URLS = [
+    "https://ads.tiktok.com/business/creativecenter/inspiration/popular/music/mobile/en",
+    "https://trends.google.com/trends/trendingsearches/daily/rss?geo=US",
+]
+
 
 def _allowed_origins() -> list[str]:
     raw = os.getenv("CORS_ALLOW_ORIGINS", "*")
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-app = FastAPI(title="Arabic Song Conversion Lab", version="0.5.0")
+app = FastAPI(title="Arabic Song Conversion Lab", version="0.6.0")
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 
 app.add_middleware(
@@ -91,6 +137,81 @@ def list_styles() -> dict:
             for key, preset in sorted(STYLE_PRESETS.items())
         ]
     }
+
+
+@app.get("/trends/live")
+def live_trend_scan() -> dict:
+    """Best-effort public trend scan plus locked safe style DNA.
+
+    TikTok trend data is restricted and can fail from server environments. This endpoint never blocks
+    the product: it attempts public pages, extracts broad keywords, then falls back to proven edit-safe
+    style patterns without copying any real song or artist.
+    """
+    sources: list[dict] = []
+    combined = ""
+    for url in LIVE_TREND_URLS:
+        item = {"url": url, "ok": False, "matches": []}
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 SongTrendScanner/1.0"})
+            with urllib.request.urlopen(req, timeout=4) as response:
+                text = response.read(200_000).decode("utf-8", errors="ignore")
+            combined += "\n" + text.lower()
+            item["ok"] = True
+            item["matches"] = _extract_trend_terms(text)
+        except Exception as exc:  # best effort only
+            item["error"] = str(exc)[:160]
+        sources.append(item)
+
+    suggestion = _choose_trend_profile(combined)
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "status": "live_scan_ok" if any(s.get("ok") for s in sources) else "fallback_patterns_only",
+        "suggested_profile": suggestion["profile"],
+        "suggested_pattern_key": suggestion["key"],
+        "suggested_pattern": suggestion,
+        "locked_style_dna": TREND_STYLE_DNA,
+        "sources": sources,
+        "originality_guardrail": "Create a fully original song. Do not copy melodies, lyrics, chord progressions, beats, riffs, arrangements, voices, or artist likenesses.",
+    }
+
+
+def _extract_trend_terms(text: str) -> list[str]:
+    lowered = re.sub(r"<[^>]+>", " ", text.lower())
+    phrases = [
+        "slowed", "speed up", "sped up", "edit", "nostalgia", "2016", "guitar",
+        "indie", "r&b", "arabic", "dance", "wedding", "viral", "golden brown",
+        "sweater weather", "master of none", "nancy", "oud", "remix", "capcut",
+    ]
+    found = []
+    for phrase in phrases:
+        if phrase in lowered and phrase not in found:
+            found.append(phrase)
+    titles = re.findall(r"<title[^>]*>(.*?)</title>", text, flags=re.I | re.S)
+    for title in titles[:5]:
+        cleaned = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", title)).strip()
+        if cleaned and cleaned.lower() not in [x.lower() for x in found]:
+            found.append(cleaned[:80])
+    return found[:12]
+
+
+def _choose_trend_profile(text: str) -> dict:
+    scores: dict[str, int] = {key: int(value["score"]) for key, value in TREND_STYLE_DNA.items()}
+    boosts = {
+        "golden_brown_desert_waltz": ["golden brown", "waltz", "hypnotic", "nostalgia", "slowed"],
+        "sweater_weather_cold_guitar": ["sweater weather", "guitar", "indie", "cold", "2016", "nostalgia"],
+        "master_of_none_slow_dream": ["master of none", "dream", "psychedelic", "slow", "lo-fi", "edit"],
+        "nancy_ajram_pop_warmth": ["nancy", "arabic", "pop", "dance", "wedding"],
+        "masculine_yemeni_nasheed_edit": ["nasheed", "arabic", "edit", "slowed", "oud", "yemeni"],
+    }
+    for key, words in boosts.items():
+        for word in words:
+            if word in text:
+                scores[key] += 4
+    best_key = max(scores, key=scores.get)
+    best = dict(TREND_STYLE_DNA[best_key])
+    best["key"] = best_key
+    best["score"] = scores[best_key]
+    return best
 
 
 @app.post("/package/from-text")
