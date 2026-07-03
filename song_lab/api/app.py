@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
-from song_lab.api.schemas import AceGenerateRequest, GenerateRequest, ImproveRequest, ScoreRequest, TextPackageRequest
+from song_lab.api.schemas import AceGenerateRequest, GenerateRequest, ImproveRequest, ScoreRequest, TextAceGenerateRequest, TextPackageRequest
 from song_lab.audio.jobs import SongJob
 from song_lab.improve import improve_package
 from song_lab.pipeline import build_conversion_package
@@ -14,7 +15,15 @@ from song_lab.providers.ace_step_api import AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
 from song_lab.scoring import VersionScore, append_score
 
-app = FastAPI(title="Arabic Song Conversion Lab", version="0.2.0")
+app = FastAPI(title="Arabic Song Conversion Lab", version="0.3.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -40,18 +49,38 @@ def list_styles() -> dict:
 
 @app.post("/package/from-text")
 def package_from_text(request: TextPackageRequest) -> dict:
-    if request.style not in STYLE_PRESETS:
-        raise HTTPException(status_code=400, detail=f"Unknown style: {request.style}")
-
-    source_text = (
-        f"Source label: {request.source_label}\n\n"
-        "Treat this as extracted song material. Preserve the emotional meaning, not exact wording.\n\n"
-        f"{request.text.strip()}"
-    )
-    package = build_conversion_package(source_text=source_text, style_key=request.style)
+    package = _package_from_text_request(request.text, request.style, request.source_label)
     data = package.model_dump()
     data["input_source"] = {"kind": "api_text", "source_label": request.source_label}
     return data
+
+
+@app.post("/generate/from-text/mock")
+def generate_from_text_mock(request: TextAceGenerateRequest) -> dict:
+    package = _package_from_text_request(request.text, request.style, request.source_label)
+    data = package.model_dump()
+    if request.lyrics.strip():
+        data["lyric_adaptation_prompt"] = request.lyrics.strip()
+    provider = MockSongProvider()
+    result = provider.run(_job_from_package(data, request.output_dir, request.duration))
+    return {"package": data, "generation": result.model_dump(mode="json")}
+
+
+@app.post("/generate/from-text/ace")
+def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
+    package = _package_from_text_request(request.text, request.style, request.source_label)
+    data = package.model_dump()
+    if request.lyrics.strip():
+        data["lyric_adaptation_prompt"] = request.lyrics.strip()
+    provider = AceStepApiProvider(
+        base_url=request.base_url,
+        api_key=request.api_key,
+        model=request.model,
+        audio_format=request.audio_format,
+        vocal_language=request.vocal_language,
+    )
+    result = provider.run(_job_from_package(data, request.output_dir, request.duration))
+    return {"package": data, "generation": result.model_dump(mode="json")}
 
 
 @app.post("/generate/mock")
@@ -100,6 +129,17 @@ def improve(request: ImproveRequest) -> dict:
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"output_path": str(request.output_path), "improvement_source": improved.get("improvement_source", {})}
+
+
+def _package_from_text_request(text: str, style: str, source_label: str):
+    if style not in STYLE_PRESETS:
+        raise HTTPException(status_code=400, detail=f"Unknown style: {style}")
+    source_text = (
+        f"Source label: {source_label}\n\n"
+        "Treat this as extracted song material. Preserve the emotional meaning, not exact wording.\n\n"
+        f"{text.strip()}"
+    )
+    return build_conversion_package(source_text=source_text, style_key=style)
 
 
 def _read_package(package_path: Path) -> dict:
