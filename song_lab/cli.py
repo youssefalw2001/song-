@@ -10,6 +10,7 @@ from song_lab.pipeline import build_conversion_package
 from song_lab.presets import STYLE_PRESETS
 from song_lab.providers.ace_step_api import AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
+from song_lab.scoring import VersionScore, append_score
 
 
 @click.group()
@@ -158,6 +159,48 @@ def ace_audio_command(
     )
     result = provider.run(_job_from_package(package_data, output_dir, duration))
     click.echo(result.model_dump_json(indent=2))
+
+
+@main.command("score-version")
+@click.option("--artifact", required=True, help="Path or label for the generated version being scored.")
+@click.option("--version-label", required=True, help="Human-readable version name, e.g. v1-dream-oud.")
+@click.option("--emotion", required=True, type=click.IntRange(1, 10))
+@click.option("--yemeni-identity", required=True, type=click.IntRange(1, 10))
+@click.option("--vocal-beauty", required=True, type=click.IntRange(1, 10))
+@click.option("--lyrics", required=True, type=click.IntRange(1, 10))
+@click.option("--instrumental", required=True, type=click.IntRange(1, 10))
+@click.option("--replay-value", required=True, type=click.IntRange(1, 10))
+@click.option("--notes", default="", help="What worked, what failed, and what to change next.")
+@click.option("--scorebook", default="outputs/scores.json", show_default=True, help="Where to save cumulative scores.")
+def score_version_command(
+    artifact: str,
+    version_label: str,
+    emotion: int,
+    yemeni_identity: int,
+    vocal_beauty: int,
+    lyrics: int,
+    instrumental: int,
+    replay_value: int,
+    notes: str,
+    scorebook: str,
+) -> None:
+    """Score a generated song version and update the running scorebook."""
+    score = VersionScore(
+        artifact_path=artifact,
+        version_label=version_label,
+        emotion=emotion,
+        yemeni_identity=yemeni_identity,
+        vocal_beauty=vocal_beauty,
+        lyrics=lyrics,
+        instrumental=instrumental,
+        replay_value=replay_value,
+        notes=notes,
+    )
+    scorebook_data = append_score(score, scorebook)
+    click.echo(json.dumps(score.to_record(), ensure_ascii=False, indent=2))
+    best = scorebook_data.get("best")
+    if best:
+        click.echo(f"Current best: {best['version_label']} with average {best['average']}")
 
 
 def _read_text_input(path: str) -> str:
