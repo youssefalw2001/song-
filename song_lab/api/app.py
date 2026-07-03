@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -21,7 +22,9 @@ from song_lab.scoring import VersionScore, append_score
 ROOT_DIR = Path(__file__).resolve().parents[2]
 FRONTEND_INDEX = ROOT_DIR / "docs" / "index.html"
 OUTPUTS_DIR = ROOT_DIR / "outputs"
+UPLOADS_DIR = OUTPUTS_DIR / "uploads"
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _allowed_origins() -> list[str]:
@@ -29,7 +32,7 @@ def _allowed_origins() -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-app = FastAPI(title="Arabic Song Conversion Lab", version="0.4.3")
+app = FastAPI(title="Arabic Song Conversion Lab", version="0.5.0")
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 
 app.add_middleware(
@@ -70,6 +73,7 @@ def health() -> dict:
         "cors_allow_origins": _allowed_origins(),
         "frontend": FRONTEND_INDEX.exists(),
         "outputs": OUTPUTS_DIR.exists(),
+        "uploads": UPLOADS_DIR.exists(),
     }
 
 
@@ -123,6 +127,58 @@ def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
     )
     result = provider.run(_job_from_package(data, request.output_dir, request.duration))
     return {"package": data, "generation": _result_with_url(result)}
+
+
+@app.post("/generate/from-audio/ace")
+def generate_from_audio_ace(
+    audio: UploadFile = File(...),
+    prompt: str = Form(...),
+    lyrics: str = Form(""),
+    duration: int = Form(120),
+    base_url: str = Form("https://api.acemusic.ai"),
+    api_key: str = Form(""),
+    model: str = Form("acestep-v15-turbo"),
+    audio_format: str = Form("mp3"),
+    vocal_language: str = Form("ar"),
+    task_type: str = Form("cover"),
+    cover_strength: float = Form(0.55),
+) -> dict:
+    allowed_suffixes = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
+    original_name = Path(audio.filename or "source_audio.mp3").name
+    suffix = Path(original_name).suffix.lower() or ".mp3"
+    if suffix not in allowed_suffixes:
+        raise HTTPException(status_code=400, detail=f"Unsupported audio type: {suffix}")
+    if duration < 10 or duration > 600:
+        raise HTTPException(status_code=400, detail="Duration must be between 10 and 600 seconds")
+
+    safe_name = f"source-{os.urandom(8).hex()}{suffix}"
+    upload_path = UPLOADS_DIR / safe_name
+    with upload_path.open("wb") as handle:
+        shutil.copyfileobj(audio.file, handle)
+
+    job = SongJob(
+        prompt=prompt.strip(),
+        lyrics=lyrics.strip(),
+        output_dir=OUTPUTS_DIR / "audio",
+        duration_seconds=duration,
+    )
+    provider = AceStepApiProvider(
+        base_url=base_url,
+        api_key=api_key or None,
+        model=model,
+        audio_format=audio_format,
+        vocal_language=vocal_language,
+    )
+    result = provider.run_with_audio(
+        job=job,
+        source_audio_path=upload_path,
+        task_type=task_type,
+        cover_strength=cover_strength,
+    )
+    return {
+        "source_audio": {"filename": original_name, "stored_path": str(upload_path)},
+        "generation": _result_with_url(result),
+    }
 
 
 @app.post("/generate/mock")
@@ -201,10 +257,11 @@ def _job_from_package(package_data: dict, output_dir: Path, duration: int) -> So
 def _result_with_url(result: SongJobResult) -> dict:
     data = result.model_dump(mode="json")
     output_path = Path(result.output_path)
+    abs_path = output_path if output_path.is_absolute() else ROOT_DIR / output_path
     try:
-        relative = output_path.resolve().relative_to(OUTPUTS_DIR.resolve())
+        relative = abs_path.resolve().relative_to(OUTPUTS_DIR.resolve())
     except ValueError:
         relative = None
-    if relative is not None and output_path.suffix.lower() in {".mp3", ".wav", ".m4a", ".ogg"}:
+    if relative is not None and abs_path.suffix.lower() in {".mp3", ".wav", ".m4a", ".ogg", ".flac"}:
         data["audio_url"] = "/outputs/" + relative.as_posix()
     return data
