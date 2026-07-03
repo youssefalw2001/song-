@@ -28,11 +28,16 @@ After GitHub Pages is enabled, open:
 https://youssefalw2001.github.io/song-/
 ```
 
-If the URL does not work yet, enable Pages in GitHub:
+Use the simple branch setup, not the workflow setup:
 
 ```text
-Repo Settings -> Pages -> Source: GitHub Actions
+Repo Settings -> Pages -> Build and deployment -> Source: Deploy from a branch
+Branch: main
+Folder: /docs
+Save
 ```
+
+If you see a failed workflow with an X, ignore it for this setup. The site is served from the `/docs` folder directly.
 
 The Pages site can generate and copy AceMusic-ready prompts. It does not store API keys and does not call AceMusic directly, because GitHub Pages is public static hosting.
 
