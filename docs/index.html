@@ -5,44 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Arabic Song Conversion Lab</title>
   <style>
-    :root{--bg:#100b07;--panel:#1c130d;--text:#fff4e6;--muted:#c9aa83;--gold:#e5aa48;--gold2:#ffd37a;--border:#4a321d;--ok:#90ee90;--bad:#ff8a8a}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,#44270f 0,#100b07 42rem);color:var(--text);line-height:1.5}.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 70px}.badge{color:var(--gold2);letter-spacing:.15em;text-transform:uppercase;font-size:12px;font-weight:900}h1{margin:8px 0;font-size:clamp(32px,6vw,64px);line-height:.96}.lead,.note,.status{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr .9fr;gap:18px}@media(max-width:850px){.grid{grid-template-columns:1fr}}.card{background:rgba(28,19,13,.92);border:1px solid var(--border);border-radius:22px;padding:18px}label{display:block;font-weight:900;margin:14px 0 8px}select,textarea,input{width:100%;border:1px solid var(--border);border-radius:14px;background:#0d0906;color:var(--text);padding:12px 13px;font:inherit}textarea{min-height:145px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:620px){.row{grid-template-columns:1fr}}button{border:0;border-radius:14px;padding:12px 15px;font-weight:900;cursor:pointer;color:#1a1007;background:linear-gradient(135deg,var(--gold),var(--gold2))}button.secondary{background:#2d2118;color:var(--text);border:1px solid var(--border)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}pre{white-space:pre-wrap;word-break:break-word;background:#090604;border:1px solid var(--border);border-radius:16px;padding:14px;max-height:420px;overflow:auto;color:#ffe8bf}.ok{color:var(--ok);font-weight:900}.bad{color:var(--bad);font-weight:900}.small{font-size:13px}.player{display:none;margin:12px 0 16px;padding:12px;border:1px solid var(--border);border-radius:16px;background:#120c08}.player audio{width:100%;margin:8px 0}.player a{color:var(--gold2);font-weight:900}
+    :root{--bg:#100b07;--panel:#1c130d;--text:#fff4e6;--muted:#c9aa83;--gold:#e5aa48;--gold2:#ffd37a;--border:#4a321d;--ok:#90ee90;--bad:#ff8a8a}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,#44270f 0,#100b07 42rem);color:var(--text);line-height:1.5}.wrap{max-width:1120px;margin:0 auto;padding:28px 16px 70px}.badge{color:var(--gold2);letter-spacing:.15em;text-transform:uppercase;font-size:12px;font-weight:900}h1{margin:8px 0;font-size:clamp(32px,6vw,64px);line-height:.96}.lead,.note,.status{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr .9fr;gap:18px}@media(max-width:850px){.grid{grid-template-columns:1fr}}.card{background:rgba(28,19,13,.92);border:1px solid var(--border);border-radius:22px;padding:18px}label{display:block;font-weight:900;margin:14px 0 8px}select,textarea,input{width:100%;border:1px solid var(--border);border-radius:14px;background:#0d0906;color:var(--text);padding:12px 13px;font:inherit}textarea{min-height:135px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:620px){.row{grid-template-columns:1fr}}button{border:0;border-radius:14px;padding:12px 15px;font-weight:900;cursor:pointer;color:#1a1007;background:linear-gradient(135deg,var(--gold),var(--gold2))}button.secondary{background:#2d2118;color:var(--text);border:1px solid var(--border)}button.danger{background:#3a1818;color:#ffd7d7;border:1px solid #713131}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}pre{white-space:pre-wrap;word-break:break-word;background:#090604;border:1px solid var(--border);border-radius:16px;padding:14px;max-height:620px;overflow:auto;color:#ffe8bf}.ok{color:var(--ok);font-weight:900}.bad{color:var(--bad);font-weight:900}.small{font-size:13px}.player{display:none;margin:12px 0 16px;padding:12px;border:1px solid var(--border);border-radius:16px;background:#120c08}.player audio{width:100%;margin:8px 0}.player a{color:var(--gold2);font-weight:900}.copybox{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.hint{border:1px dashed var(--border);border-radius:16px;padding:12px;background:#120c08;color:var(--muted)}
   </style>
 </head>
 <body>
   <main class="wrap">
     <header>
       <div class="badge">Arabic Song Conversion Lab</div>
-      <h1>Generate Arabic-style songs from the site.</h1>
-      <p class="lead">Open this page from Render, check backend, test mock, then generate real audio.</p>
+      <h1>Make a perfect AceMusic prompt.</h1>
+      <p class="lead">Free workflow: this page creates the finished Arabic/Yemeni song package. Copy it into AceMusic and generate there.</p>
     </header>
 
     <section class="grid">
       <div class="card">
-        <h2>Generator</h2>
-        <p class="note small">When using the Render-hosted page, Backend URL should be this same Render base URL.</p>
+        <h2>Song Builder</h2>
+        <p class="note small">Use this to craft the exact vibe before pasting into AceMusic. Keep it original: inspiration is fine, copying melody/lyrics is not.</p>
 
         <label for="backend">Backend URL</label>
         <input id="backend" placeholder="https://your-service.onrender.com" />
 
         <div class="row">
-          <div><label for="style">Style</label><select id="style"></select></div>
-          <div><label for="duration">Duration seconds</label><input id="duration" type="number" min="10" max="600" value="90" /></div>
+          <div><label for="style">Arabic Style</label><select id="style"></select></div>
+          <div><label for="duration">Duration seconds</label><input id="duration" type="number" min="10" max="600" value="120" /></div>
         </div>
 
         <div class="row">
-          <div><label for="engine">Music engine URL</label><input id="engine" value="https://api.acemusic.ai" /></div>
-          <div><label for="language">Vocal language</label><input id="language" value="ar" /></div>
+          <div><label for="voice">Voice</label><select id="voice"><option value="soulful male Arabic vocal, emotional, warm, clean pitch, expressive melisma">Soulful male Arabic</option><option value="beautiful female Arabic vocal, airy, emotional, elegant ornamentation">Beautiful female Arabic</option><option value="male and female Arabic duet, intimate call and response, emotional harmonies">Arabic duet</option></select></div>
+          <div><label for="energy">Energy</label><select id="energy"><option value="dreamy, hypnotic, romantic, late-night">Dreamy romantic</option><option value="wedding-like, joyful, rhythmic, celebratory">Wedding joyful</option><option value="cinematic, epic, emotional, dramatic">Cinematic epic</option><option value="sad, nostalgic, intimate, slow-burning">Sad nostalgic</option></select></div>
         </div>
 
         <div class="row">
-          <div><label for="model">Model</label><input id="model" value="acestep-v15-turbo" /></div>
-          <div><label for="format">Format</label><input id="format" value="mp3" /></div>
+          <div><label for="language">Vocal language</label><input id="language" value="Arabic, Yemeni-flavored phrasing" /></div>
+          <div><label for="format">Output format</label><input id="format" value="mp3" /></div>
         </div>
 
         <label for="idea">Song idea / inspiration</label>
         <textarea id="idea">Dreamy hypnotic love, golden light, longing, beautiful memory that is hard to forget. Make it original and Yemeni-flavored. Do not copy melody, lyrics, chord progression, or vocal line.</textarea>
 
-        <label for="lyrics">Original Arabic lyrics</label>
+        <label for="lyrics">Arabic lyrics to sing</label>
         <textarea id="lyrics">يا ضيّ ذهبي مرّ من شبّاكي
 خلّى الليل يسألني عليك
 كل ما قلت بنسى هواك يا غالي
@@ -54,49 +54,62 @@
 بس طيفك ساكن في الوريد</textarea>
 
         <div class="actions">
-          <button id="check">Check backend</button>
-          <button class="secondary" id="stylesBtn">Check styles</button>
-          <button class="secondary" id="packageBtn">Preview package</button>
-          <button id="mockBtn">Test without AI</button>
-          <button id="realBtn">Generate real audio</button>
+          <button id="makeAcePrompt">Make AceMusic Prompt</button>
+          <button id="copyPrompt">Copy Prompt</button>
+          <button class="secondary" id="packageBtn">Backend Preview</button>
+          <button class="secondary" id="mockBtn">Test Site Backend</button>
+          <button class="danger" id="realBtn">Try Direct API</button>
         </div>
         <div id="status" class="status">Ready.</div>
       </div>
 
       <div class="card">
-        <h2>Result / Player</h2>
-        <div id="player" class="player">
-          <div class="ok">Audio ready.</div>
-          <audio id="audio" controls></audio>
-          <a id="audioLink" href="#" target="_blank" rel="noopener">Open audio file</a>
-        </div>
-        <p class="note small">If real generation succeeds, the player appears here.</p>
-        <pre id="output">Click “Check backend”, then “Generate real audio”.</pre>
+        <h2>Paste this into AceMusic</h2>
+        <div class="hint small">Best use: copy the full prompt below into AceMusic’s prompt/instrumental/style box, then paste the lyrics section into its lyrics box if it has one.</div>
+        <div id="player" class="player"><div class="ok">Audio ready.</div><audio id="audio" controls></audio><a id="audioLink" href="#" target="_blank" rel="noopener">Open audio file</a></div>
+        <pre id="output">Click “Make AceMusic Prompt”.</pre>
       </div>
     </section>
   </main>
 
   <script>
-    const styles={yemeni_oud_dream_pop:'Yemeni Oud Dream Pop',arabic_oud_ballad:'Arabic Oud Ballad',levantine_pop_ballad:'Levantine Pop Ballad',khaliji_gulf_pop:'Khaliji Gulf Pop',egyptian_shaabi_pop:'Egyptian Shaabi Pop',maghrebi_rai_fusion:'Maghrebi Rai Fusion',arabic_cinematic_epic:'Arabic Cinematic Epic'};
+    const styles={
+      yemeni_oud_dream_pop:{name:'Yemeni Oud Dream Pop',bpm:'86-96 BPM',instruments:'warm oud, qanbus-like plucked strings, soft hand percussion, subtle darbuka, airy pads, deep warm bass, delicate strings',rhythm:'Yemeni Gulf-leaning sway, gentle handclaps, hypnotic 6/8 or slow 4/4 feel',notes:'Yemeni color, Arabic maqam flavor, romantic oud phrases'},
+      yemeni_wedding_modern:{name:'Modern Yemeni Wedding',bpm:'102-118 BPM',instruments:'oud, mijwiz-style leads, darbuka, tabl, claps, bright synth bass, celebratory strings',rhythm:'uplifting Yemeni wedding groove with call-and-response energy',notes:'joyful, danceable, family celebration feel'},
+      arabic_oud_ballad:{name:'Arabic Oud Ballad',bpm:'72-88 BPM',instruments:'solo oud, cinematic strings, soft riq, warm bass, piano touches, ambient pads',rhythm:'slow Arabic ballad pulse with emotional pauses',notes:'classic Arabic emotional drama'},
+      levantine_pop_ballad:{name:'Levantine Pop Ballad',bpm:'82-98 BPM',instruments:'oud, nylon guitar, soft drums, strings, modern pop bass, subtle synths',rhythm:'Levantine pop ballad groove, smooth and radio-ready',notes:'Lebanese/Syrian/Jordanian romantic color'},
+      khaliji_gulf_pop:{name:'Khaliji Gulf Pop',bpm:'96-112 BPM',instruments:'oud, mirwas, claps, Gulf percussion, synth bass, bright strings',rhythm:'Khaliji sway with elegant Gulf percussion',notes:'luxury Gulf pop feeling'},
+      egyptian_shaabi_pop:{name:'Egyptian Shaabi Pop',bpm:'104-124 BPM',instruments:'accordion-style synth, tabla, claps, mahraganat-lite bass, strings, oud touches',rhythm:'Egyptian shaabi pop bounce, catchy and street-bright',notes:'fun, catchy, urban Arabic pop'},
+      maghrebi_rai_fusion:{name:'Maghrebi Rai Fusion',bpm:'96-116 BPM',instruments:'rai synth leads, bendir, darbuka, oud accents, modern bass, airy pads',rhythm:'rai-inspired North African groove with Arabic pop polish',notes:'Algerian/Maghrebi emotional drive'},
+      arabic_cinematic_epic:{name:'Arabic Cinematic Epic',bpm:'78-96 BPM',instruments:'massive strings, oud, ney, taiko-like low drums, darbuka, choir pads, cinematic brass accents',rhythm:'slow cinematic Arabic build with dramatic percussion',notes:'trailer-level emotional power'}
+    };
     const style=document.getElementById('style'),out=document.getElementById('output'),statusEl=document.getElementById('status'),backendInput=document.getElementById('backend'),player=document.getElementById('player'),audio=document.getElementById('audio'),audioLink=document.getElementById('audioLink');
-    for(const [k,v] of Object.entries(styles)){const o=document.createElement('option');o.value=k;o.textContent=`${v} (${k})`;style.appendChild(o)}
+    for(const [k,v] of Object.entries(styles)){const o=document.createElement('option');o.value=k;o.textContent=`${v.name} (${k})`;style.appendChild(o)}
     style.value='yemeni_oud_dream_pop';
     function cleanUrl(v){return String(v||'').trim().replace(/\/+$/,'')}
     function defaultBackend(){return cleanUrl(location.origin)}
     function backend(){return cleanUrl(backendInput.value)||defaultBackend()}
     backendInput.value=localStorage.getItem('songLabBackend')||defaultBackend();
     backendInput.addEventListener('change',()=>localStorage.setItem('songLabBackend',backend()));
-    function payload(){return{text:document.getElementById('idea').value,lyrics:document.getElementById('lyrics').value,style:style.value,source_label:'render_site',duration:Number(document.getElementById('duration').value||90),base_url:cleanUrl(document.getElementById('engine').value),model:document.getElementById('model').value.trim(),audio_format:document.getElementById('format').value.trim(),vocal_language:document.getElementById('language').value.trim(),output_dir:'outputs/audio'}}
     function show(x){out.textContent=typeof x==='string'?x:JSON.stringify(x,null,2)}
     function setStatus(x,ok=false){statusEl.innerHTML=ok?`<span class="ok">${x}</span>`:`<span>${x}</span>`}
+    function buildAcePrompt(){
+      const s=styles[style.value];
+      const idea=document.getElementById('idea').value.trim();
+      const lyrics=document.getElementById('lyrics').value.trim();
+      const voice=document.getElementById('voice').value;
+      const energy=document.getElementById('energy').value;
+      const duration=document.getElementById('duration').value;
+      const language=document.getElementById('language').value.trim();
+      return `ACE MUSIC PROMPT\n\nCreate a fully original Arabic song with the following direction.\n\nSTYLE:\n${s.name}\n\nCORE FEELING:\n${idea}\n\nMUSICAL DIRECTION:\n- ${energy}\n- ${s.notes}\n- Tempo: ${s.bpm}\n- Target length: about ${duration} seconds\n- Rhythm: ${s.rhythm}\n- Instruments: ${s.instruments}\n- Production: polished modern Arabic pop, warm low end, spacious reverb, emotionally powerful but not messy\n\nVOCAL DIRECTION:\n- ${voice}\n- Language: ${language}\n- Beautiful Arabic pronunciation, emotional ornamentation, tasteful melisma\n- Vocal should feel human, passionate, and memorable\n- Chorus should be catchy and repeatable, but not childish\n\nARRANGEMENT:\nIntro: short atmospheric instrumental hook with oud/strings\nVerse 1: intimate and emotional\nPre-chorus: rising tension\nChorus: big, beautiful, unforgettable Arabic hook\nVerse 2: add more percussion and movement\nBridge: stripped-down emotional moment\nFinal chorus: fuller, more powerful, with adlibs\nOutro: soft oud or vocal echo fade\n\nIMPORTANT ORIGINALITY RULES:\nDo not copy any existing song melody, lyrics, chord progression, vocal line, or arrangement. This must be a new original song inspired only by the mood and concept.\n\nLYRICS TO SING:\n${lyrics}\n\nNEGATIVE PROMPT / AVOID:\nrobotic voice, bad Arabic pronunciation, flat singing, Western-only pop sound, EDM drop, distorted vocals, messy percussion, weak chorus, childish melody, copying existing songs, low-quality audio, off-beat vocals`;}
+    function payload(){return{text:document.getElementById('idea').value,lyrics:document.getElementById('lyrics').value,style:style.value,source_label:'render_site',duration:Number(document.getElementById('duration').value||120),base_url:'https://api.acemusic.ai',model:'acestep-v15-turbo',audio_format:document.getElementById('format').value.trim(),vocal_language:document.getElementById('language').value.trim(),output_dir:'outputs/audio'}}
     function maybeShowAudio(data){const gen=data&&data.generation?data.generation:data;if(gen&&gen.audio_url){const absolute=new URL(gen.audio_url,backend()).href;audio.src=absolute;audioLink.href=absolute;player.style.display='block';audio.load();return true}player.style.display='none';audio.removeAttribute('src');return false}
-    async function get(path){const url=`${backend()}${path}`;show(`Requesting:\n${url}`);const res=await fetch(url,{cache:'no-store'});const text=await res.text();let data;try{data=JSON.parse(text)}catch{data=text}if(!res.ok)throw new Error(`HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);return data}
     async function post(path,body){const url=`${backend()}${path}`;show(`Requesting:\n${url}`);const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});const text=await res.text();let data;try{data=JSON.parse(text)}catch{data=text}if(!res.ok)throw new Error(`HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);return data}
-    document.getElementById('check').onclick=async()=>{try{setStatus('Checking backend...');localStorage.setItem('songLabBackend',backend());const data=await get('/health');show(data);setStatus('Backend connected.',true)}catch(e){show(String(e));setStatus('Backend not reachable.')}};
-    document.getElementById('stylesBtn').onclick=async()=>{try{setStatus('Checking styles...');const data=await get('/styles');show(data);setStatus('Styles loaded.',true)}catch(e){show(String(e));setStatus('Styles check failed.')}};
-    document.getElementById('packageBtn').onclick=async()=>{try{setStatus('Building package...');const data=await post('/package/from-text',{text:payload().text,style:payload().style,source_label:'render_site'});show(data);setStatus('Package built.',true)}catch(e){show(String(e));setStatus('Package failed.')}};
-    document.getElementById('mockBtn').onclick=async()=>{try{setStatus('Running mock generation...');const data=await post('/generate/from-text/mock',payload());maybeShowAudio(data);show(data);setStatus('Mock generation complete.',true)}catch(e){show(String(e));setStatus('Mock failed.')}};
-    document.getElementById('realBtn').onclick=async()=>{try{setStatus('Generating real audio. Keep this tab open...');const data=await post('/generate/from-text/ace',payload());const hasAudio=maybeShowAudio(data);show(data);setStatus(hasAudio?'Generation finished. Press play.':'Generation returned no audio file.',hasAudio)}catch(e){show(String(e));setStatus('Real generation failed.')}};
+    document.getElementById('makeAcePrompt').onclick=()=>{const prompt=buildAcePrompt();show(prompt);setStatus('AceMusic prompt ready.',true)};
+    document.getElementById('copyPrompt').onclick=async()=>{const prompt=out.textContent.includes('ACE MUSIC PROMPT')?out.textContent:buildAcePrompt();show(prompt);try{await navigator.clipboard.writeText(prompt);setStatus('Copied. Paste it into AceMusic.',true)}catch(e){setStatus('Copy failed. Long-press the text and copy manually.')}};
+    document.getElementById('packageBtn').onclick=async()=>{try{setStatus('Building backend package...');const data=await post('/package/from-text',{text:payload().text,style:payload().style,source_label:'render_site'});show(data);setStatus('Backend package built.',true)}catch(e){show(String(e));setStatus('Package failed.')}};
+    document.getElementById('mockBtn').onclick=async()=>{try{setStatus('Testing backend...');const data=await post('/generate/from-text/mock',payload());maybeShowAudio(data);show(data);setStatus('Backend test complete.',true)}catch(e){show(String(e));setStatus('Backend test failed.')}};
+    document.getElementById('realBtn').onclick=async()=>{try{setStatus('Trying direct AceMusic API...');const data=await post('/generate/from-text/ace',payload());const hasAudio=maybeShowAudio(data);show(data);setStatus(hasAudio?'Generation finished. Press play.':'Direct API returned no audio.',hasAudio)}catch(e){show(String(e));setStatus('Direct API failed. Use Copy Prompt workflow.')}};
   </script>
 </body>
 </html>
