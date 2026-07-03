@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 
 from song_lab.audio.jobs import SongJob
+from song_lab.improve import improve_package
 from song_lab.pipeline import build_conversion_package
 from song_lab.presets import STYLE_PRESETS
 from song_lab.providers.ace_step_api import AceStepApiProvider
@@ -201,6 +202,18 @@ def score_version_command(
     best = scorebook_data.get("best")
     if best:
         click.echo(f"Current best: {best['version_label']} with average {best['average']}")
+
+
+@main.command("improve-prompt")
+@click.option("--package", "package_path", required=True, type=click.Path(exists=True, dir_okay=False))
+@click.option("--scorebook", required=True, type=click.Path(exists=True, dir_okay=False))
+@click.option("--output", "output_path", default="outputs/improved-package.json", show_default=True, type=click.Path(dir_okay=False))
+def improve_prompt_command(package_path: str, scorebook: str, output_path: str) -> None:
+    """Create a better package from the latest score feedback."""
+    improved = improve_package(package_path=package_path, scorebook_path=scorebook, output_path=output_path)
+    source = improved.get("improvement_source", {})
+    click.echo(f"Wrote improved package: {output_path}")
+    click.echo(json.dumps(source, ensure_ascii=False, indent=2))
 
 
 def _read_text_input(path: str) -> str:
