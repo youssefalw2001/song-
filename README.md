@@ -4,6 +4,7 @@ Prototype for transforming English song ideas into Arabic-inspired cover concept
 
 ## Current build
 
+- GitHub Pages static prompt-builder site
 - Python CLI prototype
 - Arabic and Yemeni style presets
 - Lyric adaptation prompt builder
@@ -16,6 +17,24 @@ Prototype for transforming English song ideas into Arabic-inspired cover concept
 - FastAPI backend for app/front-end integration
 - Text-file input flow for lyrics, notes, or song summaries
 - JSON output for repeatable testing
+
+## Use the GitHub Pages site
+
+The static site lives in `docs/index.html`.
+
+After GitHub Pages is enabled, open:
+
+```text
+https://youssefalw2001.github.io/song-/
+```
+
+If the URL does not work yet, enable Pages in GitHub:
+
+```text
+Repo Settings -> Pages -> Source: GitHub Actions
+```
+
+The Pages site can generate and copy AceMusic-ready prompts. It does not store API keys and does not call AceMusic directly, because GitHub Pages is public static hosting.
 
 ## Quick start: CLI
 
