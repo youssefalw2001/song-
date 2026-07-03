@@ -4,8 +4,9 @@ Prototype for transforming English song ideas into Arabic-inspired cover concept
 
 ## Current build
 
-- GitHub Pages static prompt-builder site
-- Python CLI prototype
+- GitHub Pages frontend app
+- FastAPI backend for real generation
+- Direct text-to-audio API routes
 - Arabic and Yemeni style presets
 - Lyric adaptation prompt builder
 - Music generation prompt builder
@@ -14,13 +15,12 @@ Prototype for transforming English song ideas into Arabic-inspired cover concept
 - Prompt improvement loop
 - Mock audio provider for end-to-end flow testing
 - ACE-Step REST API provider for real audio generation
-- FastAPI backend for app/front-end integration
-- Text-file input flow for lyrics, notes, or song summaries
+- Python CLI prototype
 - JSON output for repeatable testing
 
 ## Use the GitHub Pages site
 
-The static site lives in `docs/index.html`.
+The frontend lives in `docs/index.html`.
 
 After GitHub Pages is enabled, open:
 
@@ -28,7 +28,7 @@ After GitHub Pages is enabled, open:
 https://youssefalw2001.github.io/song-/
 ```
 
-Use the simple branch setup, not the workflow setup:
+Use the simple branch setup:
 
 ```text
 Repo Settings -> Pages -> Build and deployment -> Source: Deploy from a branch
@@ -39,7 +39,47 @@ Save
 
 If you see a failed workflow with an X, ignore it for this setup. The site is served from the `/docs` folder directly.
 
-The Pages site can generate and copy AceMusic-ready prompts. It does not store API keys and does not call AceMusic directly, because GitHub Pages is public static hosting.
+## How the site works
+
+The site is the control panel. It calls the FastAPI backend to:
+
+```text
+GET  /health
+POST /package/from-text
+POST /generate/from-text/mock
+POST /generate/from-text/ace
+POST /score
+POST /improve
+```
+
+GitHub Pages is frontend-only static hosting. It cannot run the AI model by itself. For real generation, run or deploy the backend and put that backend URL into the site.
+
+## Local full app test
+
+Terminal 1: start your backend.
+
+```bash
+pip install -r requirements.txt
+python serve.py
+```
+
+Terminal 2: start the music engine if you are using local ACE-Step.
+
+```bash
+git clone https://github.com/ACE-Step/ACE-Step-1.5.git
+cd ACE-Step-1.5
+uv sync
+uv run acestep-api
+```
+
+Then open the site and use:
+
+```text
+Backend URL: http://127.0.0.1:8080
+Music engine URL: http://127.0.0.1:8001
+```
+
+For a public GitHub Pages site, the backend should be deployed on an HTTPS host. The frontend can then call that hosted backend directly.
 
 ## Quick start: CLI
 
@@ -61,43 +101,7 @@ python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.tx
 python -m song_lab.cli mock-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio
 ```
 
-## Quick start: API server
-
-```bash
-pip install -r requirements.txt
-python serve.py
-```
-
-Then open:
-
-```text
-http://127.0.0.1:8080/docs
-```
-
-Useful endpoints:
-
-```text
-GET  /health
-GET  /styles
-POST /package/from-text
-POST /generate/mock
-POST /generate/ace
-POST /score
-POST /improve
-```
-
-## Real audio with ACE-Step
-
-Run ACE-Step 1.5 as a separate local server first:
-
-```bash
-git clone https://github.com/ACE-Step/ACE-Step-1.5.git
-cd ACE-Step-1.5
-uv sync
-uv run acestep-api
-```
-
-Then, from this repo:
+## Real audio with ACE-Step from CLI
 
 ```bash
 python -m song_lab.cli ace-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio --base-url http://127.0.0.1:8001 --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language ar
@@ -113,29 +117,6 @@ python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.tx
 python -m song_lab.cli from-text --text-file examples/extracted-song-text.txt --style yemeni_oud_dream_pop --output outputs/yemeni-package.json
 ```
 
-## Iteration loop
-
-```bash
-python -m song_lab.cli score-version --artifact outputs/audio/example.mp3 --version-label v1 --emotion 8 --yemeni-identity 7 --vocal-beauty 7 --lyrics 7 --instrumental 7 --replay-value 7 --notes "Good first version. Improve chorus."
-python -m song_lab.cli improve-prompt --package outputs/arabic-oud-package.json --scorebook outputs/scores.json --output outputs/improved-package.json
-python -m song_lab.cli ace-audio --package outputs/improved-package.json --output-dir outputs/audio
-```
-
-## What this creates
-
-The package commands create JSON containing:
-
-- song analysis prompt
-- Arabic-style lyric adaptation prompt
-- music generation prompt
-- vocal direction prompt
-- scoring rubric
-- iteration checklist
-
-The `mock-audio` command proves the pipeline shape works without needing a GPU model yet.
-
-The `ace-audio` command sends the package to a running ACE-Step API server, waits for completion, downloads the generated audio, and writes run metadata.
-
 ## MVP target
 
-One beautiful Arabic-style version first, then expand into more input types, more styles, and a web UI.
+One beautiful Arabic-style version first, then expand into more input types, hosted backend deployment, and direct audio playback/download in the browser.
