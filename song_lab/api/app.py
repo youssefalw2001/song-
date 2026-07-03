@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -15,11 +16,11 @@ from song_lab.providers.ace_step_api import AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
 from song_lab.scoring import VersionScore, append_score
 
-app = FastAPI(title="Arabic Song Conversion Lab", version="0.3.0")
+app = FastAPI(title="Arabic Song Conversion Lab", version="0.4.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("CORS_ALLOW_ORIGINS", "*").split(","),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
