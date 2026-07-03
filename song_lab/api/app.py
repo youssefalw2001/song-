@@ -7,9 +7,10 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 from song_lab.api.schemas import AceGenerateRequest, GenerateRequest, ImproveRequest, ScoreRequest, TextAceGenerateRequest, TextPackageRequest
-from song_lab.audio.jobs import SongJob
+from song_lab.audio.jobs import SongJob, SongJobResult
 from song_lab.improve import improve_package
 from song_lab.pipeline import build_conversion_package
 from song_lab.presets import STYLE_PRESETS
@@ -19,6 +20,8 @@ from song_lab.scoring import VersionScore, append_score
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 FRONTEND_INDEX = ROOT_DIR / "docs" / "index.html"
+OUTPUTS_DIR = ROOT_DIR / "outputs"
+OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _allowed_origins() -> list[str]:
@@ -26,7 +29,8 @@ def _allowed_origins() -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-app = FastAPI(title="Arabic Song Conversion Lab", version="0.4.2")
+app = FastAPI(title="Arabic Song Conversion Lab", version="0.4.3")
+app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,7 +65,12 @@ def home() -> FileResponse:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "cors_allow_origins": _allowed_origins(), "frontend": FRONTEND_INDEX.exists()}
+    return {
+        "status": "ok",
+        "cors_allow_origins": _allowed_origins(),
+        "frontend": FRONTEND_INDEX.exists(),
+        "outputs": OUTPUTS_DIR.exists(),
+    }
 
 
 @app.get("/styles")
@@ -96,7 +105,7 @@ def generate_from_text_mock(request: TextAceGenerateRequest) -> dict:
         data["lyric_adaptation_prompt"] = request.lyrics.strip()
     provider = MockSongProvider()
     result = provider.run(_job_from_package(data, request.output_dir, request.duration))
-    return {"package": data, "generation": result.model_dump(mode="json")}
+    return {"package": data, "generation": _result_with_url(result)}
 
 
 @app.post("/generate/from-text/ace")
@@ -113,7 +122,7 @@ def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
         vocal_language=request.vocal_language,
     )
     result = provider.run(_job_from_package(data, request.output_dir, request.duration))
-    return {"package": data, "generation": result.model_dump(mode="json")}
+    return {"package": data, "generation": _result_with_url(result)}
 
 
 @app.post("/generate/mock")
@@ -121,7 +130,7 @@ def generate_mock(request: GenerateRequest) -> dict:
     package_data = _read_package(request.package_path)
     provider = MockSongProvider()
     result = provider.run(_job_from_package(package_data, request.output_dir, request.duration))
-    return result.model_dump(mode="json")
+    return _result_with_url(result)
 
 
 @app.post("/generate/ace")
@@ -135,7 +144,7 @@ def generate_ace(request: AceGenerateRequest) -> dict:
         vocal_language=request.vocal_language,
     )
     result = provider.run(_job_from_package(package_data, request.output_dir, request.duration))
-    return result.model_dump(mode="json")
+    return _result_with_url(result)
 
 
 @app.post("/score")
@@ -187,3 +196,15 @@ def _job_from_package(package_data: dict, output_dir: Path, duration: int) -> So
     if not prompt:
         raise HTTPException(status_code=400, detail="Package is missing music_prompt")
     return SongJob(prompt=prompt, lyrics=lyrics, output_dir=output_dir, duration_seconds=duration)
+
+
+def _result_with_url(result: SongJobResult) -> dict:
+    data = result.model_dump(mode="json")
+    output_path = Path(result.output_path)
+    try:
+        relative = output_path.resolve().relative_to(OUTPUTS_DIR.resolve())
+    except ValueError:
+        relative = None
+    if relative is not None and output_path.suffix.lower() in {".mp3", ".wav", ".m4a", ".ogg"}:
+        data["audio_url"] = "/outputs/" + relative.as_posix()
+    return data
