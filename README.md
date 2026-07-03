@@ -1,28 +1,30 @@
-# Yemeni Song Conversion Lab
+# Arabic Song Conversion Lab
 
-Prototype for transforming English song ideas into Yemeni-inspired cover concepts.
+Prototype for transforming English song ideas into Arabic-inspired cover concepts, including Yemeni, Levantine, Gulf, Egyptian, Maghrebi, and cinematic Arabic styles.
 
 ## Current build
 
 - Python CLI prototype
-- Yemeni-inspired style presets
+- Arabic and Yemeni style presets
 - Lyric adaptation prompt builder
 - Music generation prompt builder
 - Vocal direction prompt builder
 - Version scoring rubric
+- Prompt improvement loop
 - Mock audio provider for end-to-end flow testing
 - ACE-Step REST API provider for real audio generation
+- FastAPI backend for app/front-end integration
 - Text-file input flow for lyrics, notes, or song summaries
 - JSON output for repeatable testing
 
-## Quick start
+## Quick start: CLI
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m song_lab.cli package --input examples/master-of-none-vibe.txt --style yemeni_oud_dream_pop --output outputs/test-package.json
-python -m song_lab.cli mock-audio --package outputs/test-package.json --output-dir outputs/audio
+python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style arabic_oud_ballad --output outputs/arabic-oud-package.json --source-label test_song_notes
+python -m song_lab.cli mock-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio
 ```
 
 Windows PowerShell:
@@ -31,15 +33,33 @@ Windows PowerShell:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python -m song_lab.cli package --input examples/master-of-none-vibe.txt --style yemeni_oud_dream_pop --output outputs/test-package.json
-python -m song_lab.cli mock-audio --package outputs/test-package.json --output-dir outputs/audio
+python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style arabic_oud_ballad --output outputs/arabic-oud-package.json --source-label test_song_notes
+python -m song_lab.cli mock-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio
 ```
 
-## Build from a text file
+## Quick start: API server
 
 ```bash
-python -m song_lab.cli from-text --text-file examples/extracted-song-text.txt --style yemeni_oud_dream_pop --output outputs/from-text-package.json --source-label test_song_notes
-python -m song_lab.cli mock-audio --package outputs/from-text-package.json --output-dir outputs/audio
+pip install -r requirements.txt
+python serve.py
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8080/docs
+```
+
+Useful endpoints:
+
+```text
+GET  /health
+GET  /styles
+POST /package/from-text
+POST /generate/mock
+POST /generate/ace
+POST /score
+POST /improve
 ```
 
 ## Real audio with ACE-Step
@@ -56,18 +76,33 @@ uv run acestep-api
 Then, from this repo:
 
 ```bash
-python -m song_lab.cli from-text --text-file examples/extracted-song-text.txt --style yemeni_oud_dream_pop --output outputs/from-text-package.json --source-label test_song_notes
-python -m song_lab.cli ace-audio --package outputs/from-text-package.json --output-dir outputs/audio --base-url http://127.0.0.1:8001 --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language ar
+python -m song_lab.cli ace-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio --base-url http://127.0.0.1:8001 --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language ar
 ```
 
 If generation succeeds, the final audio file will be saved under `outputs/audio`.
+
+## Style examples
+
+```bash
+python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style arabic_oud_ballad --output outputs/arabic-oud-package.json
+python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style levantine_pop_ballad --output outputs/levantine-package.json
+python -m song_lab.cli from-text --text-file examples/extracted-song-text.txt --style yemeni_oud_dream_pop --output outputs/yemeni-package.json
+```
+
+## Iteration loop
+
+```bash
+python -m song_lab.cli score-version --artifact outputs/audio/example.mp3 --version-label v1 --emotion 8 --yemeni-identity 7 --vocal-beauty 7 --lyrics 7 --instrumental 7 --replay-value 7 --notes "Good first version. Improve chorus."
+python -m song_lab.cli improve-prompt --package outputs/arabic-oud-package.json --scorebook outputs/scores.json --output outputs/improved-package.json
+python -m song_lab.cli ace-audio --package outputs/improved-package.json --output-dir outputs/audio
+```
 
 ## What this creates
 
 The package commands create JSON containing:
 
 - song analysis prompt
-- Yemeni-style lyric adaptation prompt
+- Arabic-style lyric adaptation prompt
 - music generation prompt
 - vocal direction prompt
 - scoring rubric
@@ -79,6 +114,4 @@ The `ace-audio` command sends the package to a running ACE-Step API server, wait
 
 ## MVP target
 
-Slow emotional Yemeni oud dream-pop cover.
-
-The goal is to make one beautiful version first, then expand.
+One beautiful Arabic-style version first, then expand into more input types, more styles, and a web UI.
