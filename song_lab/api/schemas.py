@@ -32,6 +32,17 @@ class AceGenerateRequest(GenerateRequest):
     vocal_language: str = "ar"
 
 
+class TextAceGenerateRequest(TextPackageRequest):
+    lyrics: str = ""
+    output_dir: Path = Path("outputs/audio")
+    duration: int = Field(default=90, ge=10, le=600)
+    base_url: str = "http://127.0.0.1:8001"
+    api_key: str | None = None
+    model: str = "acestep-v15-turbo"
+    audio_format: str = "mp3"
+    vocal_language: str = "ar"
+
+
 class ScoreRequest(BaseModel):
     artifact: str
     version_label: str
