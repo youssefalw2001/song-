@@ -5,55 +5,295 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Arabic AI Music Studio</title>
   <style>
-    :root{--bg:#100b07;--panel:#1c130d;--text:#fff4e6;--muted:#c9aa83;--gold:#e5aa48;--gold2:#ffd37a;--border:#4a321d;--ok:#90ee90;--bad:#ff8a8a}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,#5b3512 0,#100b07 42rem);color:var(--text);line-height:1.5}.wrap{max-width:1220px;margin:0 auto;padding:28px 16px 72px}.badge{color:var(--gold2);letter-spacing:.15em;text-transform:uppercase;font-size:12px;font-weight:950}h1{margin:8px 0;font-size:clamp(34px,6vw,68px);line-height:.94}.lead,.note,.status{color:var(--muted)}.grid{display:grid;grid-template-columns:1.04fr .96fr;gap:18px}@media(max-width:960px){.grid{grid-template-columns:1fr}}.card,.panel{background:rgba(28,19,13,.94);border:1px solid var(--border);border-radius:24px;padding:18px}.panel{margin:14px 0}.sub{border:1px solid #352315;border-radius:16px;padding:12px;margin-top:12px;background:#0f0906}.hero{border:1px solid #70491f;border-radius:24px;padding:18px;background:linear-gradient(180deg,rgba(229,170,72,.16),rgba(18,12,8,.98));margin:18px 0}label{display:block;font-weight:900;margin:13px 0 7px}select,textarea,input{width:100%;border:1px solid var(--border);border-radius:14px;background:#0d0906;color:var(--text);padding:12px 13px;font:inherit}textarea{min-height:92px}.biginput{font-size:18px;min-height:170px;padding:16px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}@media(max-width:720px){.row,.row3{grid-template-columns:1fr}}button{border:0;border-radius:16px;padding:13px 16px;font-weight:950;cursor:pointer;color:#1a1007;background:linear-gradient(135deg,var(--gold),var(--gold2))}button.secondary{background:#2d2118;color:var(--text);border:1px solid var(--border)}.actions,.tabs,.presetbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.tab{background:#2d2118;color:var(--text);border:1px solid var(--border)}.tab.active{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1007}.presetbar button{padding:8px 10px;border-radius:10px;font-size:12px}pre{white-space:pre-wrap;word-break:break-word;background:#090604;border:1px solid var(--border);border-radius:16px;padding:14px;max-height:360px;overflow:auto;color:#ffe8bf}.ok{color:var(--ok);font-weight:900}.bad{color:var(--bad);font-weight:900}.small{font-size:13px}.hint{border:1px dashed var(--border);border-radius:16px;padding:12px;background:#120c08;color:var(--muted);margin:12px 0}.warn{border-color:#8a4b1d;color:#ffd37a}.copycard{margin-top:14px}.copyhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.copyhead h3{margin:0;font-size:16px}.copyhead button{padding:8px 11px;border-radius:10px}.player{display:none;margin:12px 0 16px;padding:12px;border:1px solid var(--border);border-radius:16px;background:#120c08}.player audio{width:100%;margin:8px 0}.player a{color:var(--gold2);font-weight:900}.pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:5px 9px;color:var(--muted);font-size:12px;margin-right:5px}.hide{display:none}
+    :root{--bg:#100b07;--panel:#1c130d;--text:#fff4e6;--muted:#c9aa83;--gold:#e5aa48;--gold2:#ffd37a;--border:#4a321d;--ok:#90ee90;--bad:#ff8a8a}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,#5b3512 0,#100b07 42rem);color:var(--text);line-height:1.5}.wrap{max-width:1220px;margin:0 auto;padding:28px 16px 72px}.badge{color:var(--gold2);letter-spacing:.15em;text-transform:uppercase;font-size:12px;font-weight:950}h1{margin:8px 0;font-size:clamp(34px,6vw,68px);line-height:.94}.lead,.note,.status{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:960px){.grid{grid-template-columns:1fr}}.card,.panel{background:rgba(28,19,13,.94);border:1px solid var(--border);border-radius:24px;padding:18px}.panel{margin:14px 0}.sub{border:1px solid #352315;border-radius:16px;padding:12px;margin-top:12px;background:#0f0906}.hero{border:1px solid #70491f;border-radius:24px;padding:18px;background:linear-gradient(180deg,rgba(229,170,72,.16),rgba(18,12,8,.98));margin:18px 0}label{display:block;font-weight:900;margin:13px 0 7px}select,textarea,input{width:100%;border:1px solid var(--border);border-radius:14px;background:#0d0906;color:var(--text);padding:12px 13px;font:inherit}textarea{min-height:92px}.biginput{font-size:18px;min-height:180px;padding:16px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}@media(max-width:720px){.row,.row3{grid-template-columns:1fr}}button{border:0;border-radius:16px;padding:13px 16px;font-weight:950;cursor:pointer;color:#1a1007;background:linear-gradient(135deg,var(--gold),var(--gold2))}button.secondary{background:#2d2118;color:var(--text);border:1px solid var(--border)}.actions,.tabs,.presetbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.tab{background:#2d2118;color:var(--text);border:1px solid var(--border)}.tab.active{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1007}.presetbar button{padding:8px 10px;border-radius:10px;font-size:12px}pre{white-space:pre-wrap;word-break:break-word;background:#090604;border:1px solid var(--border);border-radius:16px;padding:14px;max-height:360px;overflow:auto;color:#ffe8bf}.ok{color:var(--ok);font-weight:900}.bad{color:var(--bad);font-weight:900}.small{font-size:13px}.hint{border:1px dashed var(--border);border-radius:16px;padding:12px;background:#120c08;color:var(--muted);margin:12px 0}.warn{border-color:#8a4b1d;color:#ffd37a}.copycard{margin-top:14px}.copyhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.copyhead h3{margin:0;font-size:16px}.copyhead button{padding:8px 11px;border-radius:10px}.player{display:none;margin:12px 0 16px;padding:12px;border:1px solid var(--border);border-radius:16px;background:#120c08}.player audio{width:100%;margin:8px 0}.player a{color:var(--gold2);font-weight:900}.pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:5px 9px;color:var(--muted);font-size:12px;margin-right:5px}.hide{display:none}
   </style>
 </head>
 <body>
   <main class="wrap">
-    <header><div class="badge">Arabic AI Music Studio v6</div><h1>Describe anything. AI builds the settings.</h1><p class="lead">No forced name. No forced city. Type the full idea, vibe, instruments, language, mood, and style in one box. The AI helper turns it into settings, lyrics, and a clean prompt.</p></header>
+    <header>
+      <div class="badge">Arabic AI Music Studio v6.1</div>
+      <h1>Describe anything. AI builds the settings.</h1>
+      <p class="lead">No forced name. No forced city. Type the whole idea in one prompt. Then paste into Manual Studio and generate.</p>
+    </header>
+
     <section class="grid">
       <div class="card">
-        <div class="hero"><span class="pill">BACKEND</span><strong>Connection</strong><p class="note small">Paste Render backend URL if opened from GitHub Pages.</p><label for="backend">Backend URL</label><input id="backend" placeholder="https://your-render-service.onrender.com" /><div id="backendWarning" class="hint warn small">Checking backend...</div><div class="actions"><button id="healthBtn" class="secondary" type="button">Check Backend</button><button id="testPlannerBtn" class="secondary" type="button">Test AI Helper</button></div></div>
-        <div class="tabs"><button class="tab active" id="aiTab" type="button">🧠 AI Prompt Helper</button><button class="tab" id="manualTab" type="button">🎛 Manual Studio</button></div>
+        <div class="hero">
+          <span class="pill">BACKEND</span><strong>Connection</strong>
+          <p class="note small">Paste Render backend URL if opened from GitHub Pages.</p>
+          <label for="backend">Backend URL</label>
+          <input id="backend" placeholder="https://your-render-service.onrender.com" />
+          <div id="backendWarning" class="hint warn small">Checking backend...</div>
+          <div class="actions"><button id="healthBtn" class="secondary" type="button">Check Backend</button></div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" id="aiTab" type="button">🧠 AI Prompt Helper</button>
+          <button class="tab" id="manualTab" type="button">🎛 Manual Studio</button>
+        </div>
+
+        <div id="mainStatus" class="hint small">Ready.</div>
 
         <section id="aiPanel" class="panel">
-          <span class="pill">AI HELPER</span><strong>One prompt box. That’s it.</strong>
-          <p class="note small">Example: “make a love song, female vocal, Yemeni oud, heavy funk bass, modern pop, emotional but catchy, Arabic lyrics, 45 seconds.” Add any details you want inside the prompt.</p>
-          <label for="userIdea">Describe the song you want</label><textarea id="userIdea" class="biginput" placeholder="Example: Make a song about life getting better after hardship. Yemeni oud, heavy funk bass, Arabic rap verses with a sung female hook, emotional but confident, good for slowed edits, no romance, 45 seconds."></textarea>
-          <div class="row"><div><label for="autopilotMode">Helper mode</label><select id="autopilotMode"><option value="auto" selected>Auto genius</option><option value="story">IG/Snap story</option><option value="meme">Meme / funny</option><option value="sad">Sad / emotional</option><option value="wedding">Wedding / celebration</option><option value="pop">Pop / R&B</option></select></div><div><label for="aiStrictness">Prompt strength</label><select id="aiStrictness"><option>Balanced and musical</option><option>Very detailed/professional</option><option>Simple and catchy</option><option>Experimental but clean</option></select></div></div>
-          <div class="actions"><button id="planOnlyBtn" type="button">Create Perfect Settings + Lyrics</button><button id="pastePlanBtn" class="secondary" type="button">Paste Into Manual Studio</button></div>
-          <div class="hint small">The AI helper should infer person/love/life/business/meme/style/instruments from this one prompt. Nothing else required.</div>
+          <span class="pill">AI HELPER</span><strong>One prompt box</strong>
+          <p class="note small">Example: “make a life song, female vocal, Yemeni oud, heavy funk bass, modern pop, emotional but catchy, Arabic lyrics, 45 seconds.”</p>
+          <label for="userIdea">Describe the song you want</label>
+          <textarea id="userIdea" class="biginput" placeholder="Type any idea, person, love, life, meme, wedding, rap, oud, Yemeni, funk, R&B, language, mood, instruments, voice, duration..."></textarea>
+          <div class="row">
+            <div><label for="autopilotMode">Helper mode</label><select id="autopilotMode"><option value="auto" selected>Auto genius</option><option value="story">IG/Snap story</option><option value="meme">Meme / funny</option><option value="sad">Sad / emotional</option><option value="wedding">Wedding / celebration</option><option value="pop">Pop / R&B</option></select></div>
+            <div><label for="aiStrictness">Prompt strength</label><select id="aiStrictness"><option>Balanced and musical</option><option>Very detailed/professional</option><option>Simple and catchy</option><option>Experimental but clean</option></select></div>
+          </div>
+          <div class="actions">
+            <button id="planOnlyBtn" type="button">Create Perfect Settings + Lyrics</button>
+            <button id="pastePlanBtn" class="secondary" type="button">Paste Into Manual Studio</button>
+            <button id="pasteAndGenerateBtn" class="secondary" type="button">Paste + Generate</button>
+          </div>
         </section>
 
         <section id="manualPanel" class="panel hide">
           <span class="pill">MANUAL</span><strong>Edit everything before generating</strong>
-          <div class="presetbar"><button class="secondary" type="button" data-preset="arabicTrap">Arabic Trap/Rap</button><button class="secondary" type="button" data-preset="smoothRnB">Smooth R&B</button><button class="secondary" type="button" data-preset="femalePop">Female Pop</button><button class="secondary" type="button" data-preset="nasheed">Yemeni Nasheed</button><button class="secondary" type="button" data-preset="sadOud">Sad Oud</button><button class="secondary" type="button" data-preset="funkOud">Oud Funk</button></div>
-          <div class="sub"><span class="pill">CORE</span><div class="row"><div><label for="style">Backend style</label><select id="style"><option value="arabic_cinematic_epic">Arabic Cinematic Epic</option><option value="arabic_oud_ballad">Arabic Oud Ballad</option><option value="yemeni_oud_dream_pop">Yemeni Oud Dream Pop</option><option value="levantine_pop_ballad">Levantine Pop Ballad</option><option value="khaliji_gulf_pop">Khaliji Gulf Pop</option><option value="yemeni_wedding_modern">Modern Yemeni Wedding Energy</option></select></div><div><label for="duration">Duration seconds</label><input id="duration" type="number" min="10" max="600" value="45" /></div></div><div class="row3"><div><label for="goal">Output goal</label><select id="goal"><option>Instagram/Snap story</option><option>TikTok/Reel hook</option><option>Full song demo</option><option>Wedding dedication</option><option>Meme story</option><option>Slowed edit</option><option>Rap verse</option><option>Commercial jingle</option></select></div><div><label for="bpm">BPM / tempo</label><input id="bpm" value="Auto, edit-friendly 76-104 BPM" /></div><div><label for="songKey">Key / scale</label><input id="songKey" value="Auto Arabic-friendly minor / maqam color" /></div></div></div>
-          <div class="sub"><span class="pill">VOICE</span><div class="row3"><div><label for="voiceGender">Voice gender</label><select id="voiceGender"><option>Auto best fit</option><option>Deep male</option><option>Young male</option><option>Female</option><option>Soft female</option><option>Male group chant</option><option>Female backing harmonies</option><option>Duet male and female</option></select></div><div><label for="vocalStyle">Vocal style</label><select id="vocalStyle"><option>Emotional singing</option><option>Rap verses + sung hook</option><option>Melodic rap</option><option>Pop R&B singing</option><option>Nasheed chant</option><option>Wedding group response</option><option>Soft ballad</option><option>Powerful anthem</option></select></div><div><label for="delivery">Delivery</label><select id="delivery"><option>Confident and clean</option><option>Late-night smooth</option><option>Sad and intimate</option><option>Proud and masculine</option><option>Playful meme but polished</option><option>Luxury pop</option><option>Spiritual but modern</option></select></div></div><div class="row"><div><label for="language">Vocal language</label><input id="language" value="Arabic, Yemeni-flavored phrasing" /></div><div><label for="pronunciation">Pronunciation / accent</label><input id="pronunciation" value="Clear Arabic pronunciation, natural phrasing, no robotic delivery" /></div></div></div>
-          <div class="sub"><span class="pill">STYLE</span><label for="reference">Creative direction</label><input id="reference" /><label for="genreFusion">Genre fusion</label><input id="genreFusion" value="Arabic/Yemeni roots with modern production" /><label for="trendDNA">Style DNA</label><textarea id="trendDNA"></textarea><label for="instrumentalNotes">Instrumental notes</label><textarea id="instrumentalNotes"></textarea><div class="row"><div><label for="structure">Song structure</label><input id="structure" value="Intro 0-3s, hook by 8s, verse, hook repeat, clean ending" /></div><div><label for="hookRules">Hook rules</label><input id="hookRules" value="Short, repeatable, strong first 8 seconds, easy for captions" /></div></div></div>
-          <div class="sub"><span class="pill">MIX + CONTENT</span><div class="row3"><div><label for="mixStyle">Mix/master</label><select id="mixStyle"><option>Clean loud social-media master</option><option>Warm analog Arabic mix</option><option>Luxury glossy pop master</option><option>Dark trap/R&B master</option><option>Raw emotional acoustic mix</option></select></div><div><label for="slowed">Slowed edit target</label><select id="slowed"><option>Must sound good at 0.85x</option><option>Normal only</option><option>Also good at 0.75x</option><option>Fast/reel energy</option></select></div><div><label for="qualityThreshold">Minimum score</label><select id="qualityThreshold"><option value="80" selected>80 - strict</option><option value="75">75 - balanced</option><option value="85">85 - very strict</option></select></div></div><label for="idea">Song concept</label><textarea id="idea"></textarea><label for="lyrics">Lyrics</label><textarea id="lyrics"></textarea><label for="negativePrompt">Negative prompt / avoid</label><textarea id="negativePrompt">ridiculous output, childish voice, copied artist voice, copied melody, karaoke cover, weak drums, no hook, long empty intro, generic EDM, robotic voice, bad pronunciation, flat singing, off-beat vocals, messy percussion, noisy mix, random genre switch</textarea><div class="row"><div><label for="format">Output format</label><input id="format" value="mp3" /></div><div><label for="extraNotes">Extra instructions</label><input id="extraNotes" /></div></div></div>
-          <div class="actions"><button id="generateBtn" type="button">Generate From My Settings</button><button id="goodBtn" class="secondary" type="button">Generate Until Good</button><button class="secondary" id="copyAll" type="button">Copy Prompt</button><button class="secondary" id="mockBtn" type="button">Test Mock</button></div><div id="status" class="status">Ready.</div>
+          <div class="presetbar">
+            <button class="secondary" type="button" data-preset="arabicTrap">Arabic Trap/Rap</button>
+            <button class="secondary" type="button" data-preset="smoothRnB">Smooth R&B</button>
+            <button class="secondary" type="button" data-preset="femalePop">Female Pop</button>
+            <button class="secondary" type="button" data-preset="nasheed">Yemeni Nasheed</button>
+            <button class="secondary" type="button" data-preset="sadOud">Sad Oud</button>
+            <button class="secondary" type="button" data-preset="funkOud">Oud Funk</button>
+          </div>
+          <div class="sub">
+            <span class="pill">CORE</span>
+            <div class="row"><div><label for="style">Backend style</label><select id="style"><option value="arabic_cinematic_epic">Arabic Cinematic Epic</option><option value="arabic_oud_ballad">Arabic Oud Ballad</option><option value="yemeni_oud_dream_pop">Yemeni Oud Dream Pop</option><option value="levantine_pop_ballad">Levantine Pop Ballad</option><option value="khaliji_gulf_pop">Khaliji Gulf Pop</option><option value="yemeni_wedding_modern">Modern Yemeni Wedding Energy</option></select></div><div><label for="duration">Duration seconds</label><input id="duration" type="number" min="10" max="600" value="45" /></div></div>
+            <div class="row3"><div><label for="goal">Output goal</label><select id="goal"><option>Instagram/Snap story</option><option>TikTok/Reel hook</option><option>Full song demo</option><option>Wedding dedication</option><option>Meme story</option><option>Slowed edit</option><option>Rap verse</option><option>Commercial jingle</option></select></div><div><label for="bpm">BPM / tempo</label><input id="bpm" value="Auto, edit-friendly 76-104 BPM" /></div><div><label for="songKey">Key / scale</label><input id="songKey" value="Auto Arabic-friendly minor / maqam color" /></div></div>
+          </div>
+          <div class="sub">
+            <span class="pill">VOICE</span>
+            <div class="row3"><div><label for="voiceGender">Voice gender</label><select id="voiceGender"><option>Auto best fit</option><option>Deep male</option><option>Young male</option><option>Female</option><option>Soft female</option><option>Male group chant</option><option>Female backing harmonies</option><option>Duet male and female</option></select></div><div><label for="vocalStyle">Vocal style</label><select id="vocalStyle"><option>Emotional singing</option><option>Rap verses + sung hook</option><option>Melodic rap</option><option>Pop R&B singing</option><option>Nasheed chant</option><option>Wedding group response</option><option>Soft ballad</option><option>Powerful anthem</option></select></div><div><label for="delivery">Delivery</label><select id="delivery"><option>Confident and clean</option><option>Late-night smooth</option><option>Sad and intimate</option><option>Proud and masculine</option><option>Playful meme but polished</option><option>Luxury pop</option><option>Spiritual but modern</option></select></div></div>
+            <div class="row"><div><label for="language">Vocal language</label><input id="language" value="Arabic, Yemeni-flavored phrasing" /></div><div><label for="pronunciation">Pronunciation / accent</label><input id="pronunciation" value="Clear Arabic pronunciation, natural phrasing, no robotic delivery" /></div></div>
+          </div>
+          <div class="sub">
+            <span class="pill">STYLE</span>
+            <label for="reference">Creative direction</label><input id="reference" />
+            <label for="genreFusion">Genre fusion</label><input id="genreFusion" value="Arabic/Yemeni roots with modern production" />
+            <label for="trendDNA">Style DNA</label><textarea id="trendDNA"></textarea>
+            <label for="instrumentalNotes">Instrumental notes</label><textarea id="instrumentalNotes"></textarea>
+            <div class="row"><div><label for="structure">Song structure</label><input id="structure" value="Intro 0-3s, hook by 8s, verse, hook repeat, clean ending" /></div><div><label for="hookRules">Hook rules</label><input id="hookRules" value="Short, repeatable, strong first 8 seconds, easy for captions" /></div></div>
+          </div>
+          <div class="sub">
+            <span class="pill">MIX + CONTENT</span>
+            <div class="row3"><div><label for="mixStyle">Mix/master</label><select id="mixStyle"><option>Clean loud social-media master</option><option>Warm analog Arabic mix</option><option>Luxury glossy pop master</option><option>Dark trap/R&B master</option><option>Raw emotional acoustic mix</option></select></div><div><label for="slowed">Slowed edit target</label><select id="slowed"><option>Must sound good at 0.85x</option><option>Normal only</option><option>Also good at 0.75x</option><option>Fast/reel energy</option></select></div><div><label for="qualityThreshold">Minimum score</label><select id="qualityThreshold"><option value="80" selected>80 - strict</option><option value="75">75 - balanced</option><option value="85">85 - very strict</option></select></div></div>
+            <label for="idea">Song concept</label><textarea id="idea"></textarea>
+            <label for="lyrics">Lyrics</label><textarea id="lyrics"></textarea>
+            <label for="negativePrompt">Negative prompt / avoid</label><textarea id="negativePrompt">ridiculous output, childish voice, copied artist voice, copied melody, karaoke cover, weak drums, no hook, long empty intro, generic EDM, robotic voice, bad pronunciation, flat singing, off-beat vocals, messy percussion, noisy mix, random genre switch</textarea>
+            <div class="row"><div><label for="format">Output format</label><input id="format" value="mp3" /></div><div><label for="extraNotes">Extra instructions</label><input id="extraNotes" /></div></div>
+          </div>
+          <div class="actions"><button id="generateBtn" type="button">Generate From My Settings</button><button id="copyAll" class="secondary" type="button">Copy Prompt</button><button id="mockBtn" class="secondary" type="button">Test Mock</button></div>
         </section>
       </div>
-      <div class="card"><h2>Output / Debug</h2><div class="hint small">AI creates the settings/lyrics, then paste into Manual Studio and generate.</div><div id="player" class="player"><div class="ok">Audio ready.</div><audio id="audio" controls crossorigin="anonymous"></audio><a id="audioLink" href="#" target="_blank" rel="noopener">Open audio file</a><div class="actions"><button id="analyzeAudioBtn" type="button">🧠 Analyze Edit Score</button><button class="secondary" id="copyBestCutBtn" type="button">Copy Best Cut</button></div></div><div class="copycard"><div class="copyhead"><h3>1. Error / Status</h3><button data-copy="errorBox">Copy</button></div><pre id="errorBox">No errors yet.</pre></div><div class="copycard"><div class="copyhead"><h3>2. AI Pasteable Plan</h3><button data-copy="decisionBox">Copy</button></div><pre id="decisionBox">Type any song idea in the AI Helper.</pre></div><div class="copycard"><div class="copyhead"><h3>3. Quality Gate</h3><button data-copy="qualityBox">Copy</button></div><pre id="qualityBox">Generate audio to score it.</pre></div><div class="copycard"><div class="copyhead"><h3>4. Audio Edit Score</h3><button data-copy="analysisBox">Copy</button></div><pre id="analysisBox">Generate audio, then analyze.</pre></div><div class="copycard"><div class="copyhead"><h3>5. Story Package</h3><button data-copy="tiktokBox">Copy</button></div><pre id="tiktokBox">Caption, hashtags, and video idea will appear here.</pre></div><div class="copycard"><div class="copyhead"><h3>6. Lyrics</h3><button data-copy="lyricsBox">Copy</button></div><pre id="lyricsBox">Lyrics will appear here.</pre></div><div class="copycard"><div class="copyhead"><h3>7. Full Prompt</h3><button data-copy="fullBox">Copy</button></div><pre id="fullBox">Full prompt will appear here.</pre></div></div>
+
+      <div class="card">
+        <h2>Output / Debug</h2>
+        <div class="hint small">If something fails, copy Error / Status and send it.</div>
+        <div id="player" class="player"><div class="ok">Audio ready.</div><audio id="audio" controls crossorigin="anonymous"></audio><a id="audioLink" href="#" target="_blank" rel="noopener">Open audio file</a></div>
+        <div class="copycard"><div class="copyhead"><h3>1. Error / Status</h3><button data-copy="errorBox">Copy</button></div><pre id="errorBox">No errors yet.</pre></div>
+        <div class="copycard"><div class="copyhead"><h3>2. AI Pasteable Plan</h3><button data-copy="decisionBox">Copy</button></div><pre id="decisionBox">Type any song idea in the AI Helper.</pre></div>
+        <div class="copycard"><div class="copyhead"><h3>3. Story Package</h3><button data-copy="tiktokBox">Copy</button></div><pre id="tiktokBox">Caption, hashtags, and video idea will appear here.</pre></div>
+        <div class="copycard"><div class="copyhead"><h3>4. Lyrics</h3><button data-copy="lyricsBox">Copy</button></div><pre id="lyricsBox">Lyrics will appear here.</pre></div>
+        <div class="copycard"><div class="copyhead"><h3>5. Full Prompt</h3><button data-copy="fullBox">Copy</button></div><pre id="fullBox">Full prompt will appear here.</pre></div>
+      </div>
     </section>
   </main>
+
 <script>
-const $=id=>document.getElementById(id),statusEl=$('status'),backendInput=$('backend'),backendWarning=$('backendWarning'),player=$('player'),audio=$('audio'),audioLink=$('audioLink'),decisionBox=$('decisionBox'),analysisBox=$('analysisBox'),tiktokBox=$('tiktokBox'),lyricsBox=$('lyricsBox'),fullBox=$('fullBox'),qualityBox=$('qualityBox'),errorBox=$('errorBox');let lastBestCut='Best cut not analyzed yet.',avoid=[],lastPlan=null;
-const styleMeta={arabic_cinematic_epic:{name:'Arabic Cinematic Epic',bpm:'72-96 BPM',rhythm:'slow cinematic Arabic build with dramatic percussion',instruments:'oud, choir, strings, frame drums, cinematic percussion'},arabic_oud_ballad:{name:'Arabic Oud Ballad',bpm:'70-88 BPM',rhythm:'slow Arabic ballad pulse',instruments:'oud, soft strings, riq, frame drum, warm bass'},yemeni_oud_dream_pop:{name:'Yemeni Oud Dream Pop',bpm:'76-84 BPM',rhythm:'slow spacious Yemeni pulse',instruments:'oud, qanbus-style lute, soft frame drum, hand percussion, pads'},levantine_pop_ballad:{name:'Levantine Pop Ballad',bpm:'82-100 BPM',rhythm:'modern Arabic pop ballad pulse',instruments:'oud, piano, strings, soft pop drums, bass'},khaliji_gulf_pop:{name:'Khaliji Gulf Pop',bpm:'88-110 BPM',rhythm:'Gulf groove with claps and percussion',instruments:'oud, khaliji percussion, claps, strings, bass'},yemeni_wedding_modern:{name:'Modern Yemeni Wedding Energy',bpm:'96-112 BPM',rhythm:'celebratory Yemeni rhythm',instruments:'oud, hand drums, claps, group chorus'}};
-const presets={arabicTrap:{style:'khaliji_gulf_pop',reference:'Arabic trap / melodic rap with Yemeni identity',genreFusion:'Arabic rap, Yemeni percussion, trap bass, oud accents',bpm:'92-108 BPM, strong bounce',voiceGender:'Young male',vocalStyle:'Rap verses + sung hook',delivery:'Confident and clean',mixStyle:'Dark trap/R&B master',instrumentalNotes:'deep bass, crisp hats, Arabic percussion, oud/qanbus phrases, hook drop before 8 seconds',trendDNA:'melodic rap pocket, short hook, luxury night energy, clean Arabic flow'},smoothRnB:{style:'levantine_pop_ballad',reference:'Original smooth late-night Arabic R&B / pop-rap energy',genreFusion:'Arabic pop, smooth R&B, soft drums',bpm:'76-92 BPM, slow bounce',voiceGender:'Deep male',vocalStyle:'Pop R&B singing',delivery:'Late-night smooth',mixStyle:'Luxury glossy pop master',instrumentalNotes:'warm pads, deep bass, soft keys, oud texture, intimate vocal',trendDNA:'night drive mood, emotional flex, clean hook, glossy bounce'},femalePop:{style:'levantine_pop_ballad',reference:'Elegant female Arabic pop, sweet but not childish',genreFusion:'Arabic pop, soft dance pulse, warm strings',bpm:'88-104 BPM, catchy pop groove',voiceGender:'Female',vocalStyle:'Emotional singing',delivery:'Luxury pop',mixStyle:'Luxury glossy pop master',instrumentalNotes:'female lead vocal, warm strings, oud sparkle, clean percussion, bright hook lift',trendDNA:'sweet chorus, elegant melody, polished Arabic pop'},nasheed:{style:'arabic_cinematic_epic',reference:'Powerful Yemeni motivational nasheed',genreFusion:'Yemeni chant, cinematic drums, oud/qanbus',bpm:'72-96 BPM, march-like pulse',voiceGender:'Male group chant',vocalStyle:'Nasheed chant',delivery:'Proud and masculine',mixStyle:'Clean loud social-media master',instrumentalNotes:'deep male lead, group response, low drums, claps, oud/qanbus, serious tone',trendDNA:'pride, discipline, honor, family, strong chant hook'},sadOud:{style:'arabic_oud_ballad',reference:'Sad Arabic oud/guitar ballad',genreFusion:'Arabic oud ballad, acoustic guitar, warm strings',bpm:'68-86 BPM, slow emotional pulse',voiceGender:'Soft female',vocalStyle:'Soft ballad',delivery:'Sad and intimate',mixStyle:'Raw emotional acoustic mix',instrumentalNotes:'oud, nylon guitar, soft strings, light frame drum, intimate vocal',trendDNA:'heartfelt, simple melody, lyric overlay, emotional story'},funkOud:{style:'yemeni_oud_dream_pop',reference:'Yemeni oud with heavy funk groove',genreFusion:'Yemeni oud/qanbus, heavy funk bass, Arabic percussion, modern hook',bpm:'88-106 BPM, funky pocket',voiceGender:'Auto best fit',vocalStyle:'Rap verses + sung hook',delivery:'Confident and clean',mixStyle:'Clean loud social-media master',instrumentalNotes:'heavy funk bassline, tight drums, oud stabs, claps, call-and-response hook',trendDNA:'funk pocket, Arabic/Yemeni identity, catchy hook, playful but premium'}};
-function cleanUrl(v){return String(v||'').trim().replace(/\/+$/,'')}function looksStatic(){return /github\.io|localhost|127\.0\.0\.1/.test(location.hostname)&&!location.port}function defaultBackend(){return looksStatic()?'' : cleanUrl(location.origin)}function backend(){return cleanUrl(backendInput.value)||defaultBackend()}backendInput.value=localStorage.getItem('songLabBackend')||defaultBackend();backendInput.addEventListener('change',()=>{localStorage.setItem('songLabBackend',backend());checkBackendWarning()});function setStatus(x,ok=false){statusEl.innerHTML=ok?`<span class="ok">${x}</span>`:`<span>${x}</span>`}function setError(label,e){const text=typeof e==='string'?e:(e&&e.stack?e.stack:String(e));errorBox.textContent=`${label}\n\n${text}`;setStatus(label)}function checkBackendWarning(){if(!backend()){backendWarning.innerHTML='<span class="bad">Backend URL missing.</span> Paste your Render URL, then click Check Backend.';return false}backendWarning.innerHTML=`Using backend: <b>${backend()}</b>`;return true}
-function showTab(which){const ai=which==='ai';$('aiPanel').classList.toggle('hide',!ai);$('manualPanel').classList.toggle('hide',ai);$('aiTab').classList.toggle('active',ai);$('manualTab').classList.toggle('active',!ai)}$('manualTab').onclick=()=>showTab('manual');$('aiTab').onclick=()=>showTab('ai');document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>applyPreset(b.dataset.preset));function applyPreset(name){const p=presets[name];if(!p)return;for(const [k,v] of Object.entries(p)){if($(k))$(k).value=v}renderKit();setStatus('Preset loaded. Edit anything before generating.',true)}
-async function health(){try{if(!checkBackendWarning())return;const res=await fetch(`${backend()}/health`,{cache:'no-store'});const data=await res.json();if(!res.ok)throw new Error(JSON.stringify(data,null,2));errorBox.textContent='Backend health OK.\n\n'+JSON.stringify(data,null,2);setStatus(data.autopilot_api_configured?'Backend OK. Real AI helper configured.':'Backend OK. Fallback helper only.',true)}catch(e){setError('Backend health check failed.',e)}}
-async function plan(){if(!checkBackendWarning())throw new Error('Backend URL missing. Paste Render URL first.');const prompt=($('userIdea').value+'\nPrompt strength: '+$('aiStrictness').value).trim();if(!prompt){setStatus('Type the song idea first.');return}setStatus('AI helper is building settings and lyrics...');const body={idea:prompt,mode:$('autopilotMode').value,avoid};const res=await fetch(`${backend()}/autopilot/plan`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});const text=await res.text();let data;try{data=JSON.parse(text)}catch{data={raw:text}}if(!res.ok)throw new Error(`Planner HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);lastPlan=data;renderPlan(data);avoid.push({creative_angle:data.creative_angle,style:data.style,lyrics:(data.lyrics||'').slice(0,220)});avoid=avoid.slice(-10);return data}
-function renderPlan(p){decisionBox.textContent=`PASTEABLE AI SETTINGS\n\nPlanner: ${p.planner}\nStyle: ${p.style}\nCreative direction: ${p.creative_angle}\nMood: ${p.mood}\nDuration: ${p.duration||45}s\n\nSTYLE DNA:\n${p.trend_dna||''}\n\nINSTRUMENTAL NOTES:\n${p.instrumental_notes||''}\n\nVOICE:\n${p.voice_direction||''}\n\nTEMPO / STRUCTURE:\n${p.tempo||''}\n${p.structure||''}\n\nCONCEPT:\n${p.concept||''}\n\nLYRICS:\n${p.lyrics||''}\n\nWhy:\n${(p.why||[]).map(x=>'• '+x).join('\n')}\n\nGuardrail:\n${p.originality_guardrail||'Fully original only.'}${p.planner_error?'\n\nPlanner error: '+p.planner_error:''}`;tiktokBox.textContent=`STORY PACKAGE\n\nStory text:\n${p.story_text||''}\n\nMeme text:\n${p.meme_text||''}\n\nCaption:\n${p.caption||''}\n\nHashtags:\n${(p.hashtags||[]).join(' ')}\n\nVideo idea:\n${p.video_idea||''}`;lyricsBox.textContent=p.lyrics||'';setStatus('AI helper created settings and lyrics. Paste into Manual Studio to edit/generate.',true)}
-function pastePlan(){if(!lastPlan){setStatus('No AI plan yet. Click Create Perfect Settings + Lyrics first.');return}const p=lastPlan;$('style').value=p.style||'arabic_cinematic_epic';$('duration').value=p.duration||45;$('reference').value=p.creative_angle||'';$('trendDNA').value=(p.trend_dna||'')+'\nQuality rules: no ridiculous output; no childish vocals; no random genre switch; premium feel only.';$('instrumentalNotes').value=(p.instrumental_notes||'')+'\nMust have strong downbeat, clear hook, clean arrangement, and human-sounding vocal.';$('idea').value=p.concept||'';$('lyrics').value=p.lyrics||'';if(p.voice_direction)$('extraNotes').value=p.voice_direction;renderKit();showTab('manual');setStatus('AI plan pasted. Edit anything, then generate.',true)}
-function kit(){const s=styleMeta[$('style').value],styleText=`Create a fully original song.\n\nOUTPUT GOAL\n${$('goal').value}\n\nCORE SETTINGS\nBackend style: ${s.name}\nCreative direction: ${$('reference').value.trim()}\nGenre fusion: ${$('genreFusion').value.trim()}\nBPM/tempo: ${$('bpm').value.trim()}\nKey/scale: ${$('songKey').value.trim()}\nStyle DNA: ${$('trendDNA').value.trim()}\n\nVOICE SETTINGS\nVoice gender: ${$('voiceGender').value}\nVocal style: ${$('vocalStyle').value}\nDelivery: ${$('delivery').value}\nLanguage: ${$('language').value.trim()}\nPronunciation/accent: ${$('pronunciation').value.trim()}\n\nARRANGEMENT\nTempo target from preset: ${s.bpm}\nRhythm: ${s.rhythm}\nCore instruments: ${s.instruments}\nInstrumental notes: ${$('instrumentalNotes').value.trim()}\nSong structure: ${$('structure').value.trim()}\nHook rules: ${$('hookRules').value.trim()}\n\nMIX AND MASTER\n${$('mixStyle').value}\nSlowed edit target: ${$('slowed').value}\n\nCONCEPT\n${$('idea').value.trim()}\n\nSTRICT QUALITY REQUIREMENTS\nStrong hook in first 8 seconds. Short repeatable chorus. Clear rhythm. Good for social edits. Avoid weak drums, robotic vocals, long empty intros, offbeat delivery, and random genre switches.\n\nEXTRA INSTRUCTIONS\n${$('extraNotes').value.trim()}\n\nTarget length: about ${$('duration').value} seconds.\nOriginality rule: do not copy existing song melodies, lyrics, chord progressions, beats, arrangements, voices, or artist likenesses.`;const lyrics=$('lyrics').value.trim(),negative=$('negativePrompt').value.trim();return{styleText,lyrics,full:`FULL MUSIC PROMPT\n\n${styleText}\n\nLYRICS:\n${lyrics}\n\nNEGATIVE / AVOID:\n${negative}`}}
-function renderKit(){const k=kit();fullBox.textContent=k.full;lyricsBox.textContent=k.lyrics}async function copyText(text,label){try{await navigator.clipboard.writeText(text);setStatus(`${label} copied.`,true)}catch(e){setStatus('Copy failed.')}}function payload(){const k=kit();return{text:k.styleText,lyrics:k.lyrics,style:$('style').value,source_label:'prompt_first_ai_helper_v6',duration:Number($('duration').value||45),base_url:'https://api.acemusic.ai',model:'acestep-v15-turbo',audio_format:$('format').value.trim(),vocal_language:$('language').value.trim(),output_dir:'outputs/audio'}}
-function maybeShowAudio(data){const gen=data&&data.generation?data.generation:data;if(gen&&gen.audio_url){const absolute=new URL(gen.audio_url,backend()).href;audio.src=absolute;audioLink.href=absolute;player.style.display='block';audio.load();analysisBox.textContent='Audio ready. Click Analyze Edit Score.';return true}player.style.display='none';return false}async function post(path,body){if(!checkBackendWarning())throw new Error('Backend URL missing.');const res=await fetch(`${backend()}${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'});const text=await res.text();let data;try{data=JSON.parse(text)}catch{data={raw:text}}if(!res.ok)throw new Error(`HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);return data}async function generate(label='Generating from manual settings...'){renderKit();setStatus(label);const data=await post('/generate/from-text/ace',payload());const hasAudio=maybeShowAudio(data);fullBox.textContent=JSON.stringify(data,null,2)+'\n\n--- PROMPT USED ---\n'+kit().full;setStatus(hasAudio?'Generated. Analyze before posting.':'No playable audio returned.',hasAudio);return hasAudio}
-async function generateUntilGood(){try{qualityBox.textContent='QUALITY GATE STARTED\nUsing current Manual Studio settings. Will try up to 3 generations.\n';const threshold=Number($('qualityThreshold').value||80);let best=null;for(let i=1;i<=3;i++){const ok=await generate(`Attempt ${i}: generating from manual settings...`);if(!ok){qualityBox.textContent+=`\nAttempt ${i}: no audio`;continue}await waitForAudioReady();const result=await analyzeCurrentAudio(true);best=!best||result.score>best.score?result:best;qualityBox.textContent+=`\nAttempt ${i} score: ${result.score}/100 — ${result.verdict}`;if(result.score>=threshold){qualityBox.textContent+=`\n\n✅ POSTABLE TAKE FOUND. Use this one.`;setStatus('Postable take found. Listen before posting.',true);return}}qualityBox.textContent+=`\n\n⚠️ No version passed ${threshold}/100. Best score: ${best?best.score:0}/100. Adjust settings or try AI helper.`;setStatus('No strong take found. Adjust settings.')}catch(e){setError('Generate Until Good failed.',e)}}function waitForAudioReady(){return new Promise(resolve=>{if(audio.readyState>=1)return resolve();const done=()=>{audio.removeEventListener('loadedmetadata',done);resolve()};audio.addEventListener('loadedmetadata',done);setTimeout(resolve,2500)})}function fmt(sec){sec=Math.max(0,Math.round(sec));return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`}
-async function analyzeCurrentAudio(silent=false){if(!audio.src){if(!silent)setStatus('No audio to analyze yet.');return {score:0,verdict:'no_audio'}}if(!silent)setStatus('Analyzing edit score...');analysisBox.textContent='Decoding audio...';try{const res=await fetch(audio.src,{cache:'no-store'}),buf=await res.arrayBuffer(),Ctx=window.AudioContext||window.webkitAudioContext,ctx=new Ctx(),decoded=await ctx.decodeAudioData(buf.slice(0)),ch=decoded.getChannelData(0),sr=decoded.sampleRate,dur=decoded.duration,chunk=Math.max(1024,Math.floor(sr*.25)),rms=[],flux=[];let prev=0;for(let i=0;i<ch.length;i+=chunk){let sum=0,n=Math.min(chunk,ch.length-i);for(let j=0;j<n;j++){const v=ch[i+j];sum+=v*v}const r=Math.sqrt(sum/n);rms.push(r);flux.push(Math.max(0,r-prev));prev=r}const avg=rms.reduce((a,b)=>a+b,0)/(rms.length||1),max=Math.max(...rms),dynamic=max/(avg||.001),sorted=[...flux].sort((a,b)=>a-b),threshold=sorted[Math.floor(sorted.length*.78)]||0,peaks=[];for(let i=1;i<flux.length-1;i++)if(flux[i]>threshold&&flux[i]>flux[i-1]&&flux[i]>=flux[i+1])peaks.push(i*.25);let intervals=[];for(let i=1;i<peaks.length;i++){const d=peaks[i]-peaks[i-1];if(d>=.28&&d<=1.2)intervals.push(d)}let bpm=Math.round(60/(intervals.sort((a,b)=>a-b)[Math.floor(intervals.length/2)]||.67));while(bpm<70)bpm*=2;while(bpm>150)bpm=Math.round(bpm/2);let bestStart=0,bestEnergy=-1,win=Math.max(1,Math.round(15/.25));for(let i=0;i<Math.max(1,rms.length-win);i++){const e=rms.slice(i,i+win).reduce((a,b)=>a+b,0)+(i<8?.06:0);if(e>bestEnergy){bestEnergy=e;bestStart=i*.25}}const bestEnd=Math.min(dur,bestStart+15),beatStrength=Math.min(100,Math.round((flux.reduce((a,b)=>a+b,0)/(flux.length||1))/(avg||.001)*90)),hookSpeed=bestStart<=12?95:bestStart<=20?78:58,slowedPotential=(bpm>=76&&bpm<=102)?94:(bpm>=65&&bpm<=120?78:60),dynamicScore=Math.min(100,Math.round(dynamic*22)),loudnessScore=Math.min(100,Math.round(avg*900)),durationPenalty=dur<20?18:dur>75?8:0,editScore=Math.max(0,Math.round(beatStrength*.28+hookSpeed*.24+slowedPotential*.22+dynamicScore*.16+loudnessScore*.10-durationPenalty)),verdict=editScore>=85?'POSTABLE 🔥':editScore>=80?'good enough to test':editScore>=70?'draft only — try another version':'reject — weak/ridiculous risk';lastBestCut=`Best cut: ${fmt(bestStart)}–${fmt(bestEnd)}\nSlowed speed: 0.85x\nVerdict: ${verdict}`;analysisBox.textContent=`AUDIO EDIT SCORE\n\nEdit Score: ${editScore}/100\nVerdict: ${verdict}\nBest cut: ${fmt(bestStart)}–${fmt(bestEnd)}\nEstimated tempo: ${bpm} BPM\nBeat strength: ${beatStrength}/100\nHook speed: ${hookSpeed}/100\nSlowed potential: ${slowedPotential}/100\nDynamic impact: ${dynamicScore}/100`;if(!silent)setStatus('Audio analysis complete.',true);try{ctx.close()}catch{}return {score:editScore,verdict,bestStart,bestEnd,bpm}}catch(e){analysisBox.textContent='Analysis failed: '+String(e);if(!silent)setStatus('Audio analysis failed.');return {score:0,verdict:'analysis_failed'}}}
-$('healthBtn').onclick=health;$('testPlannerBtn').onclick=()=>plan().catch(e=>setError('AI helper test failed.',e));$('planOnlyBtn').onclick=()=>plan().catch(e=>setError('AI helper failed.',e));$('pastePlanBtn').onclick=pastePlan;$('generateBtn').onclick=()=>generate().catch(e=>setError('Generate failed.',e));$('goodBtn').onclick=generateUntilGood;$('copyAll').onclick=()=>{renderKit();copyText(fullBox.textContent,'Prompt')};$('mockBtn').onclick=async()=>{try{renderKit();const data=await post('/generate/from-text/mock',payload());fullBox.textContent=JSON.stringify(data,null,2);setStatus('Mock backend test complete.',true)}catch(e){setError('Mock backend test failed.',e)}};$('analyzeAudioBtn').onclick=()=>analyzeCurrentAudio(false);$('copyBestCutBtn').onclick=()=>copyText(lastBestCut,'Best cut');document.querySelectorAll('[data-copy]').forEach(btn=>btn.addEventListener('click',()=>copyText($(btn.dataset.copy).textContent,btn.closest('.copycard').querySelector('h3').textContent)));checkBackendWarning();renderKit();
+const $ = id => document.getElementById(id);
+let lastPlan = null;
+let avoid = [];
+
+const styleMeta = {
+  arabic_cinematic_epic:{name:'Arabic Cinematic Epic',bpm:'72-96 BPM',rhythm:'slow cinematic Arabic build',instruments:'oud, choir, strings, frame drums, cinematic percussion'},
+  arabic_oud_ballad:{name:'Arabic Oud Ballad',bpm:'70-88 BPM',rhythm:'slow Arabic ballad pulse',instruments:'oud, soft strings, riq, frame drum, warm bass'},
+  yemeni_oud_dream_pop:{name:'Yemeni Oud Dream Pop',bpm:'76-84 BPM',rhythm:'slow spacious Yemeni pulse',instruments:'oud, qanbus-style lute, soft frame drum, hand percussion, pads'},
+  levantine_pop_ballad:{name:'Levantine Pop Ballad',bpm:'82-100 BPM',rhythm:'modern Arabic pop ballad pulse',instruments:'oud, piano, strings, soft pop drums, bass'},
+  khaliji_gulf_pop:{name:'Khaliji Gulf Pop',bpm:'88-110 BPM',rhythm:'Gulf groove with claps and percussion',instruments:'oud, khaliji percussion, claps, strings, bass'},
+  yemeni_wedding_modern:{name:'Modern Yemeni Wedding Energy',bpm:'96-112 BPM',rhythm:'celebratory Yemeni rhythm',instruments:'oud, hand drums, claps, group chorus'}
+};
+
+const presets = {
+  arabicTrap:{style:'khaliji_gulf_pop',reference:'Arabic trap / melodic rap with Yemeni identity',genreFusion:'Arabic rap, Yemeni percussion, trap bass, oud accents',bpm:'92-108 BPM, strong bounce',voiceGender:'Young male',vocalStyle:'Rap verses + sung hook',delivery:'Confident and clean',mixStyle:'Dark trap/R&B master',instrumentalNotes:'deep bass, crisp hats, Arabic percussion, oud/qanbus phrases, hook drop before 8 seconds',trendDNA:'melodic rap pocket, short hook, luxury night energy, clean Arabic flow'},
+  smoothRnB:{style:'levantine_pop_ballad',reference:'Original smooth late-night Arabic R&B / pop-rap energy',genreFusion:'Arabic pop, smooth R&B, soft drums',bpm:'76-92 BPM, slow bounce',voiceGender:'Deep male',vocalStyle:'Pop R&B singing',delivery:'Late-night smooth',mixStyle:'Luxury glossy pop master',instrumentalNotes:'warm pads, deep bass, soft keys, oud texture, intimate vocal',trendDNA:'night drive mood, emotional flex, clean hook, glossy bounce'},
+  femalePop:{style:'levantine_pop_ballad',reference:'Elegant female Arabic pop, sweet but not childish',genreFusion:'Arabic pop, soft dance pulse, warm strings',bpm:'88-104 BPM, catchy pop groove',voiceGender:'Female',vocalStyle:'Emotional singing',delivery:'Luxury pop',mixStyle:'Luxury glossy pop master',instrumentalNotes:'female lead vocal, warm strings, oud sparkle, clean percussion, bright hook lift',trendDNA:'sweet chorus, elegant melody, polished Arabic pop'},
+  nasheed:{style:'arabic_cinematic_epic',reference:'Powerful Yemeni motivational nasheed',genreFusion:'Yemeni chant, cinematic drums, oud/qanbus',bpm:'72-96 BPM, march-like pulse',voiceGender:'Male group chant',vocalStyle:'Nasheed chant',delivery:'Proud and masculine',mixStyle:'Clean loud social-media master',instrumentalNotes:'deep male lead, group response, low drums, claps, oud/qanbus, serious tone',trendDNA:'pride, discipline, honor, family, strong chant hook'},
+  sadOud:{style:'arabic_oud_ballad',reference:'Sad Arabic oud/guitar ballad',genreFusion:'Arabic oud ballad, acoustic guitar, warm strings',bpm:'68-86 BPM, slow emotional pulse',voiceGender:'Soft female',vocalStyle:'Soft ballad',delivery:'Sad and intimate',mixStyle:'Raw emotional acoustic mix',instrumentalNotes:'oud, nylon guitar, soft strings, light frame drum, intimate vocal',trendDNA:'heartfelt, simple melody, lyric overlay, emotional story'},
+  funkOud:{style:'yemeni_oud_dream_pop',reference:'Yemeni oud with heavy funk groove',genreFusion:'Yemeni oud/qanbus, heavy funk bass, Arabic percussion, modern hook',bpm:'88-106 BPM, funky pocket',voiceGender:'Auto best fit',vocalStyle:'Rap verses + sung hook',delivery:'Confident and clean',mixStyle:'Clean loud social-media master',instrumentalNotes:'heavy funk bassline, tight drums, oud stabs, claps, call-and-response hook',trendDNA:'funk pocket, Arabic/Yemeni identity, catchy hook, playful but premium'}
+};
+
+function setStatus(message, ok=false){
+  $('mainStatus').innerHTML = ok ? `<span class="ok">${message}</span>` : message;
+}
+function setError(label, err){
+  const text = typeof err === 'string' ? err : (err && err.stack ? err.stack : String(err));
+  $('errorBox').textContent = `${label}\n\n${text}`;
+  setStatus(label);
+}
+function cleanUrl(v){return String(v||'').trim().replace(/\/+$/,'')}
+function looksStatic(){return /github\.io|localhost|127\.0\.0\.1/.test(location.hostname)&&!location.port}
+function defaultBackend(){return looksStatic()?'' : cleanUrl(location.origin)}
+function backend(){return cleanUrl($('backend').value)||defaultBackend()}
+function checkBackendWarning(){
+  if(!backend()){
+    $('backendWarning').innerHTML='<span class="bad">Backend URL missing.</span> Paste your Render URL.';
+    return false;
+  }
+  $('backendWarning').innerHTML=`Using backend: <b>${backend()}</b>`;
+  return true;
+}
+function showTab(which){
+  const ai = which === 'ai';
+  $('aiPanel').classList.toggle('hide', !ai);
+  $('manualPanel').classList.toggle('hide', ai);
+  $('aiTab').classList.toggle('active', ai);
+  $('manualTab').classList.toggle('active', !ai);
+}
+function applyPreset(name){
+  const p = presets[name];
+  if(!p) return;
+  Object.entries(p).forEach(([k,v]) => { if($(k)) $(k).value = v; });
+  renderKit();
+  setStatus('Preset loaded. Edit anything, then generate.', true);
+}
+
+async function health(){
+  try{
+    if(!checkBackendWarning()) return;
+    const res = await fetch(`${backend()}/health`, {cache:'no-store'});
+    const data = await res.json();
+    if(!res.ok) throw new Error(JSON.stringify(data,null,2));
+    $('errorBox').textContent = 'Backend health OK.\n\n' + JSON.stringify(data,null,2);
+    setStatus(data.autopilot_api_configured ? 'Backend OK. Real AI helper configured.' : 'Backend OK. Fallback helper only.', true);
+  }catch(e){setError('Backend health check failed.', e)}
+}
+
+async function createPlan(){
+  try{
+    if(!checkBackendWarning()) return;
+    const prompt = ($('userIdea').value + '\nPrompt strength: ' + $('aiStrictness').value).trim();
+    if(!prompt){ setStatus('Type the song idea first.'); return; }
+    setStatus('AI helper is building settings and lyrics...');
+    const body = { idea: prompt, mode: $('autopilotMode').value, avoid };
+    const res = await fetch(`${backend()}/autopilot/plan`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), cache:'no-store'});
+    const text = await res.text();
+    let data; try{ data = JSON.parse(text); } catch { data = { raw:text }; }
+    if(!res.ok) throw new Error(`Planner HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);
+    lastPlan = data;
+    avoid.push({creative_angle:data.creative_angle, style:data.style, lyrics:(data.lyrics||'').slice(0,220)});
+    avoid = avoid.slice(-10);
+    renderPlan(data);
+    setStatus('AI helper created settings and lyrics. Click Paste Into Manual Studio.', true);
+  }catch(e){ setError('AI helper failed.', e); }
+}
+
+function renderPlan(p){
+  $('decisionBox').textContent = `PASTEABLE AI SETTINGS\n\nPlanner: ${p.planner||''}\nStyle: ${p.style||''}\nCreative direction: ${p.creative_angle||''}\nMood: ${p.mood||''}\nDuration: ${p.duration||45}s\n\nSTYLE DNA:\n${p.trend_dna||''}\n\nINSTRUMENTAL NOTES:\n${p.instrumental_notes||''}\n\nVOICE:\n${p.voice_direction||''}\n\nTEMPO / STRUCTURE:\n${p.tempo||''}\n${p.structure||''}\n\nCONCEPT:\n${p.concept||''}\n\nLYRICS:\n${p.lyrics||''}\n\nWhy:\n${(p.why||[]).map(x=>'• '+x).join('\n')}\n\nGuardrail:\n${p.originality_guardrail||'Fully original only.'}${p.planner_error?'\n\nPlanner error: '+p.planner_error:''}`;
+  $('tiktokBox').textContent = `STORY PACKAGE\n\nStory text:\n${p.story_text||''}\n\nMeme text:\n${p.meme_text||''}\n\nCaption:\n${p.caption||''}\n\nHashtags:\n${(p.hashtags||[]).join(' ')}\n\nVideo idea:\n${p.video_idea||''}`;
+  $('lyricsBox').textContent = p.lyrics || '';
+}
+
+function pastePlan(){
+  if(!lastPlan){ setStatus('No AI plan yet. Click Create Perfect Settings + Lyrics first.'); return false; }
+  const p = lastPlan;
+  $('style').value = p.style || 'arabic_cinematic_epic';
+  $('duration').value = p.duration || 45;
+  $('reference').value = p.creative_angle || '';
+  $('trendDNA').value = (p.trend_dna || '') + '\nQuality rules: no ridiculous output; no childish vocals; no random genre switch; premium feel only.';
+  $('instrumentalNotes').value = (p.instrumental_notes || '') + '\nMust have strong downbeat, clear hook, clean arrangement, and human-sounding vocal.';
+  $('idea').value = p.concept || '';
+  $('lyrics').value = p.lyrics || '';
+  $('extraNotes').value = p.voice_direction || p.tempo || '';
+  renderKit();
+  showTab('manual');
+  setStatus('AI plan pasted into Manual Studio. Generate button is ready.', true);
+  return true;
+}
+
+function kit(){
+  const s = styleMeta[$('style').value] || styleMeta.arabic_cinematic_epic;
+  const styleText = `Create a fully original song.\n\nOUTPUT GOAL\n${$('goal').value}\n\nCORE SETTINGS\nBackend style: ${s.name}\nCreative direction: ${$('reference').value.trim()}\nGenre fusion: ${$('genreFusion').value.trim()}\nBPM/tempo: ${$('bpm').value.trim()}\nKey/scale: ${$('songKey').value.trim()}\nStyle DNA: ${$('trendDNA').value.trim()}\n\nVOICE SETTINGS\nVoice gender: ${$('voiceGender').value}\nVocal style: ${$('vocalStyle').value}\nDelivery: ${$('delivery').value}\nLanguage: ${$('language').value.trim()}\nPronunciation/accent: ${$('pronunciation').value.trim()}\n\nARRANGEMENT\nTempo target from preset: ${s.bpm}\nRhythm: ${s.rhythm}\nCore instruments: ${s.instruments}\nInstrumental notes: ${$('instrumentalNotes').value.trim()}\nSong structure: ${$('structure').value.trim()}\nHook rules: ${$('hookRules').value.trim()}\n\nMIX AND MASTER\n${$('mixStyle').value}\nSlowed edit target: ${$('slowed').value}\n\nCONCEPT\n${$('idea').value.trim()}\n\nSTRICT QUALITY REQUIREMENTS\nStrong hook in first 8 seconds. Short repeatable chorus. Clear rhythm. Good for social edits. Avoid weak drums, robotic vocals, long empty intros, offbeat delivery, and random genre switches.\n\nEXTRA INSTRUCTIONS\n${$('extraNotes').value.trim()}\n\nTarget length: about ${$('duration').value} seconds.\nOriginality rule: do not copy existing song melodies, lyrics, chord progressions, beats, arrangements, voices, or artist likenesses.`;
+  const lyrics = $('lyrics').value.trim();
+  const negative = $('negativePrompt').value.trim();
+  return {styleText, lyrics, full:`FULL MUSIC PROMPT\n\n${styleText}\n\nLYRICS:\n${lyrics}\n\nNEGATIVE / AVOID:\n${negative}`};
+}
+function renderKit(){
+  const k = kit();
+  $('fullBox').textContent = k.full;
+  $('lyricsBox').textContent = k.lyrics;
+}
+function payload(){
+  const k = kit();
+  return {text:k.styleText, lyrics:k.lyrics, style:$('style').value, source_label:'prompt_first_ai_helper_v6_1', duration:Number($('duration').value||45), base_url:'https://api.acemusic.ai', model:'acestep-v15-turbo', audio_format:$('format').value.trim(), vocal_language:$('language').value.trim(), output_dir:'outputs/audio'};
+}
+async function post(path, body){
+  if(!checkBackendWarning()) throw new Error('Backend URL missing.');
+  const res = await fetch(`${backend()}${path}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), cache:'no-store'});
+  const text = await res.text();
+  let data; try{ data = JSON.parse(text); } catch { data = { raw:text }; }
+  if(!res.ok) throw new Error(`HTTP ${res.status}\n${JSON.stringify(data,null,2)}`);
+  return data;
+}
+function showAudio(data){
+  const gen = data && data.generation ? data.generation : data;
+  if(gen && gen.audio_url){
+    const absolute = new URL(gen.audio_url, backend()).href;
+    $('audio').src = absolute;
+    $('audioLink').href = absolute;
+    $('player').style.display = 'block';
+    $('audio').load();
+    return true;
+  }
+  $('player').style.display = 'none';
+  return false;
+}
+async function generate(){
+  try{
+    renderKit();
+    setStatus('Generating from Manual Studio settings...');
+    const data = await post('/generate/from-text/ace', payload());
+    const hasAudio = showAudio(data);
+    $('fullBox').textContent = JSON.stringify(data,null,2) + '\n\n--- PROMPT USED ---\n' + kit().full;
+    setStatus(hasAudio ? 'Generated. Audio is ready.' : 'Generation returned no playable audio.', hasAudio);
+  }catch(e){ setError('Generate failed.', e); }
+}
+async function pasteAndGenerate(){
+  if(pastePlan()) await generate();
+}
+async function mock(){
+  try{
+    renderKit();
+    const data = await post('/generate/from-text/mock', payload());
+    $('fullBox').textContent = JSON.stringify(data,null,2) + '\n\n--- PROMPT USED ---\n' + kit().full;
+    setStatus('Mock backend test complete. Manual send path works.', true);
+  }catch(e){ setError('Mock test failed.', e); }
+}
+async function copyText(text,label){
+  try{ await navigator.clipboard.writeText(text); setStatus(`${label} copied.`, true); }
+  catch(e){ setStatus('Copy failed.'); }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  $('backend').value = localStorage.getItem('songLabBackend') || defaultBackend();
+  $('backend').addEventListener('change', () => { localStorage.setItem('songLabBackend', backend()); checkBackendWarning(); });
+  $('aiTab').addEventListener('click', () => showTab('ai'));
+  $('manualTab').addEventListener('click', () => showTab('manual'));
+  $('healthBtn').addEventListener('click', health);
+  $('planOnlyBtn').addEventListener('click', createPlan);
+  $('pastePlanBtn').addEventListener('click', pastePlan);
+  $('pasteAndGenerateBtn').addEventListener('click', pasteAndGenerate);
+  $('generateBtn').addEventListener('click', generate);
+  $('copyAll').addEventListener('click', () => { renderKit(); copyText($('fullBox').textContent, 'Prompt'); });
+  $('mockBtn').addEventListener('click', mock);
+  document.querySelectorAll('[data-preset]').forEach(btn => btn.addEventListener('click', () => applyPreset(btn.dataset.preset)));
+  document.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', () => copyText($(btn.dataset.copy).textContent, btn.closest('.copycard').querySelector('h3').textContent)));
+  checkBackendWarning();
+  renderKit();
+});
 </script>
 </body>
 </html>
