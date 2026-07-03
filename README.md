@@ -5,7 +5,7 @@ Prototype for transforming English song ideas into Arabic-inspired cover concept
 ## Current build
 
 - GitHub Pages frontend app
-- FastAPI backend for real generation
+- Render-ready FastAPI backend
 - Direct text-to-audio API routes
 - Arabic and Yemeni style presets
 - Lyric adaptation prompt builder
@@ -14,7 +14,7 @@ Prototype for transforming English song ideas into Arabic-inspired cover concept
 - Version scoring rubric
 - Prompt improvement loop
 - Mock audio provider for end-to-end flow testing
-- ACE-Step REST API provider for real audio generation
+- ACE-Step-compatible REST API provider for real audio generation
 - Python CLI prototype
 - JSON output for repeatable testing
 
@@ -39,6 +39,58 @@ Save
 
 If you see a failed workflow with an X, ignore it for this setup. The site is served from the `/docs` folder directly.
 
+## Deploy the backend on Render
+
+This repo includes a Render Blueprint:
+
+```text
+render.yaml
+```
+
+In Render:
+
+```text
+New -> Blueprint -> Connect this GitHub repo -> Apply
+```
+
+Render will create a Python web service using:
+
+```text
+Build command: pip install -r requirements.txt
+Start command: uvicorn song_lab.api.app:app --host 0.0.0.0 --port $PORT
+```
+
+Add these Render environment variables:
+
+```text
+ACESTEP_API_URL = your ACE-compatible music engine API URL
+ACESTEP_API_KEY = your private API key
+ACESTEP_MODEL = acestep-v15-turbo
+CORS_ALLOW_ORIGINS = https://youssefalw2001.github.io
+```
+
+Do not put the API key in GitHub Pages or JavaScript. Put it only in Render environment variables.
+
+After Render deploys, copy your Render service URL, for example:
+
+```text
+https://arabic-song-conversion-api.onrender.com
+```
+
+Then open the GitHub Pages site and paste that into:
+
+```text
+Backend URL
+```
+
+Click:
+
+```text
+Check backend
+Test without AI
+Generate real audio
+```
+
 ## How the site works
 
 The site is the control panel. It calls the FastAPI backend to:
@@ -52,7 +104,18 @@ POST /score
 POST /improve
 ```
 
-GitHub Pages is frontend-only static hosting. It cannot run the AI model by itself. For real generation, run or deploy the backend and put that backend URL into the site.
+GitHub Pages is frontend-only static hosting. Render runs the backend and keeps your API key private.
+
+## Phone/browser-only flow
+
+```text
+1. Deploy backend on Render from the repo blueprint.
+2. Add environment variables in Render.
+3. Enable GitHub Pages from /docs.
+4. Open the Pages site.
+5. Paste the Render backend URL.
+6. Generate from the site.
+```
 
 ## Local full app test
 
@@ -101,10 +164,10 @@ python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.tx
 python -m song_lab.cli mock-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio
 ```
 
-## Real audio with ACE-Step from CLI
+## Real audio with ACE-compatible engine from CLI
 
 ```bash
-python -m song_lab.cli ace-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio --base-url http://127.0.0.1:8001 --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language ar
+python -m song_lab.cli ace-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio --base-url $ACESTEP_API_URL --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language ar
 ```
 
 If generation succeeds, the final audio file will be saved under `outputs/audio`.
