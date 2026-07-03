@@ -12,6 +12,7 @@ Prototype for transforming English song ideas into Yemeni-inspired cover concept
 - Version scoring rubric
 - Mock audio provider for end-to-end flow testing
 - ACE-Step REST API provider for real audio generation
+- Text-file input flow for lyrics, notes, or song summaries
 - JSON output for repeatable testing
 
 ## Quick start
@@ -34,6 +35,13 @@ python -m song_lab.cli package --input examples/master-of-none-vibe.txt --style 
 python -m song_lab.cli mock-audio --package outputs/test-package.json --output-dir outputs/audio
 ```
 
+## Build from a text file
+
+```bash
+python -m song_lab.cli from-text --text-file examples/extracted-song-text.txt --style yemeni_oud_dream_pop --output outputs/from-text-package.json --source-label test_song_notes
+python -m song_lab.cli mock-audio --package outputs/from-text-package.json --output-dir outputs/audio
+```
+
 ## Real audio with ACE-Step
 
 Run ACE-Step 1.5 as a separate local server first:
@@ -48,15 +56,15 @@ uv run acestep-api
 Then, from this repo:
 
 ```bash
-python -m song_lab.cli package --input examples/master-of-none-vibe.txt --style yemeni_oud_dream_pop --output outputs/test-package.json
-python -m song_lab.cli ace-audio --package outputs/test-package.json --output-dir outputs/audio --base-url http://127.0.0.1:8001 --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language ar
+python -m song_lab.cli from-text --text-file examples/extracted-song-text.txt --style yemeni_oud_dream_pop --output outputs/from-text-package.json --source-label test_song_notes
+python -m song_lab.cli ace-audio --package outputs/from-text-package.json --output-dir outputs/audio --base-url http://127.0.0.1:8001 --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language ar
 ```
 
 If generation succeeds, the final audio file will be saved under `outputs/audio`.
 
 ## What this creates
 
-The `package` command creates a `test-package.json` containing:
+The package commands create JSON containing:
 
 - song analysis prompt
 - Yemeni-style lyric adaptation prompt
@@ -65,7 +73,7 @@ The `package` command creates a `test-package.json` containing:
 - scoring rubric
 - iteration checklist
 
-The `mock-audio` command proves the audio pipeline shape works without needing a GPU model yet. It writes a mock generation JSON to `outputs/audio`.
+The `mock-audio` command proves the pipeline shape works without needing a GPU model yet.
 
 The `ace-audio` command sends the package to a running ACE-Step API server, waits for completion, downloads the generated audio, and writes run metadata.
 
@@ -74,7 +82,3 @@ The `ace-audio` command sends the package to a running ACE-Step API server, wait
 Slow emotional Yemeni oud dream-pop cover.
 
 The goal is to make one beautiful version first, then expand.
-
-## Real model status
-
-The repo does not vendor ACE-Step model code or weights. It integrates with ACE-Step through its local REST API. That keeps this project small and lets ACE-Step handle GPU/model setup separately.
