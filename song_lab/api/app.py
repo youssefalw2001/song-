@@ -19,7 +19,7 @@ from song_lab.autopilot import build_autopilot_plan
 from song_lab.improve import improve_package
 from song_lab.pipeline import build_conversion_package
 from song_lab.presets import STYLE_PRESETS
-from song_lab.providers.ace_step_api import AceStepApiProvider
+from song_lab.providers.ace_step_api import AceStepApiError, AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
 from song_lab.scoring import VersionScore, append_score
 
@@ -175,8 +175,18 @@ def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
     data = package.model_dump()
     if request.lyrics.strip():
         data["lyric_adaptation_prompt"] = request.lyrics.strip()
-    provider = AceStepApiProvider(base_url=request.base_url, api_key=request.api_key, model=request.model, audio_format=request.audio_format, vocal_language=request.vocal_language)
-    result = provider.run(_job_from_package(data, request.output_dir, request.duration))
+    try:
+        with AceStepApiProvider(
+            base_url=request.base_url,
+            api_key=request.api_key,
+            model=request.model,
+            audio_format=request.audio_format,
+            vocal_language=request.vocal_language,
+            candidates=request.candidates,
+        ) as provider:
+            result = provider.run(_job_from_package(data, request.output_dir, request.duration))
+    except AceStepApiError as exc:
+        raise HTTPException(status_code=502, detail=f"ACE-Step generation failed: {exc}") from exc
     return {"package": data, "generation": _result_with_url(result)}
 
 
@@ -194,8 +204,11 @@ def generate_from_audio_ace(audio: UploadFile = File(...), prompt: str = Form(..
     with upload_path.open("wb") as handle:
         shutil.copyfileobj(audio.file, handle)
     job = SongJob(prompt=prompt.strip(), lyrics=lyrics.strip(), output_dir=OUTPUTS_DIR / "audio", duration_seconds=duration)
-    provider = AceStepApiProvider(base_url=base_url, api_key=api_key or None, model=model, audio_format=audio_format, vocal_language=vocal_language)
-    result = provider.run_with_audio(job=job, source_audio_path=upload_path, task_type=task_type, cover_strength=cover_strength)
+    try:
+        with AceStepApiProvider(base_url=base_url, api_key=api_key or None, model=model, audio_format=audio_format, vocal_language=vocal_language) as provider:
+            result = provider.run_with_audio(job=job, source_audio_path=upload_path, task_type=task_type, cover_strength=cover_strength)
+    except AceStepApiError as exc:
+        raise HTTPException(status_code=502, detail=f"ACE-Step generation failed: {exc}") from exc
     return {"source_audio": {"filename": original_name, "stored_path": str(upload_path)}, "generation": _result_with_url(result)}
 
 
@@ -210,8 +223,18 @@ def generate_mock(request: GenerateRequest) -> dict:
 @app.post("/generate/ace")
 def generate_ace(request: AceGenerateRequest) -> dict:
     package_data = _read_package(request.package_path)
-    provider = AceStepApiProvider(base_url=request.base_url, api_key=request.api_key, model=request.model, audio_format=request.audio_format, vocal_language=request.vocal_language)
-    result = provider.run(_job_from_package(package_data, request.output_dir, request.duration))
+    try:
+        with AceStepApiProvider(
+            base_url=request.base_url,
+            api_key=request.api_key,
+            model=request.model,
+            audio_format=request.audio_format,
+            vocal_language=request.vocal_language,
+            candidates=request.candidates,
+        ) as provider:
+            result = provider.run(_job_from_package(package_data, request.output_dir, request.duration, request.bpm_hint))
+    except AceStepApiError as exc:
+        raise HTTPException(status_code=502, detail=f"ACE-Step generation failed: {exc}") from exc
     return _result_with_url(result)
 
 
@@ -244,12 +267,13 @@ def _read_package(package_path: Path) -> dict:
     return json.loads(package_path.read_text(encoding="utf-8"))
 
 
-def _job_from_package(package_data: dict, output_dir: Path, duration: int) -> SongJob:
+def _job_from_package(package_data: dict, output_dir: Path, duration: int, bpm_hint: int | None = None) -> SongJob:
     prompt = package_data.get("music_prompt", "").strip()
     lyrics = package_data.get("lyric_adaptation_prompt", "").strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Package is missing music_prompt")
-    return SongJob(prompt=prompt, lyrics=lyrics, output_dir=output_dir, duration_seconds=duration)
+    resolved_bpm_hint = bpm_hint if bpm_hint is not None else package_data.get("bpm_hint")
+    return SongJob(prompt=prompt, lyrics=lyrics, output_dir=output_dir, duration_seconds=duration, bpm_hint=resolved_bpm_hint)
 
 
 def _result_with_url(result: SongJobResult) -> dict:

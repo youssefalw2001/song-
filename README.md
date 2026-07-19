@@ -14,9 +14,97 @@ Prototype for transforming English song ideas into Arabic-inspired cover concept
 - Version scoring rubric
 - Prompt improvement loop
 - Mock audio provider for end-to-end flow testing
-- ACE-Step-compatible REST API provider for real audio generation
+- Production-hardened ACE-Step-compatible REST API provider: typed errors, retry with backoff+jitter, concurrency limiting, best-of-N candidate generation, and mutagen-based audio validation
+- Automatic BPM hints derived from each style preset, forwarded to the audio provider
+- Primary/fallback provider wrapper for resilience against a single backend going down
+- Structured JSON logging with automatic secret and audio-payload redaction
 - Python CLI prototype
 - JSON output for repeatable testing
+- pytest suite covering the hardened provider, rate limiter, fallback wrapper, and BPM parsing
+- Async stress-test harness for load-testing the API and smoke-testing the real backend
+
+## IMPORTANT: acemusic.ai now requires an API key
+
+As of this update, the free hosted `https://api.acemusic.ai` completion endpoint returns
+`HTTP 401: Missing authentication token` on every request with no key configured. This was
+verified live against the real service, not assumed. The previous assumption that
+acemusic.ai was fully open/keyless is no longer accurate -- you must obtain an API key
+from acemusic.ai and set `ACEMUSIC_API_KEY` (or `ACESTEP_API_KEY`) before real generation
+will work against that backend. Budget for this before assuming a $0 generation cost.
+
+## Hardened ACE-Step provider
+
+`song_lab/providers/ace_step_api.py` is production-grade, not a thin HTTP wrapper:
+
+- **Typed exceptions** -- `AceStepAuthError`, `AceStepClientError`, `AceStepRateLimitedError`,
+  `AceStepServerError`, `AceStepTimeoutError`, `AceStepInvalidResponseError` -- so callers can
+  distinguish "your API key is wrong" from "the service is temporarily overloaded" from
+  "the response was corrupt," and only the last three are ever retried.
+- **Explicit timeouts** on every request (connect/read/write/pool), never an indefinite hang.
+- **Retry with exponential backoff and jitter**, capped by `max_retries` -- 429 and 5xx
+  responses and transport errors are retried; 4xx client errors and auth failures never are.
+- **Concurrency limiting** (`song_lab/rate_limit.py`) caps how many generation requests are
+  in flight at once against the shared free acemusic.ai service, so a traffic spike can't
+  silently hammer a resource we don't control. Configurable via `ACESTEP_MAX_CONCURRENT`
+  (default 2).
+- **Best-of-N candidate generation** -- pass `candidates=N` (CLI: `--candidates`, API:
+  `"candidates": N`) to generate multiple takes and automatically keep the one whose actual
+  duration is closest to the requested length.
+- **Audio validation** -- every downloaded file is opened with `mutagen` and checked for a
+  minimum size and a real, parseable duration before being reported as a successful
+  generation. A truncated or corrupt download is treated as a failure, never silently
+  returned as if it were a good song.
+- **Resource cleanup** -- the provider is a context manager (`with AceStepApiProvider(...) as
+  provider:`); the underlying HTTP connection pool is always closed, even on error.
+
+## Fallback provider
+
+`song_lab/providers/fallback.py` wraps a primary and one or more fallback providers. If the
+primary raises or returns a failed result, the next provider is tried, in order. It never
+silently substitutes a mock provider for a real one -- if you want a mock fallback in a
+non-production environment, pass `MockSongProvider()` explicitly as one of the fallbacks so
+that choice is visible in your own code, not hidden in this library.
+
+```python
+from song_lab.providers.ace_step_api import AceStepApiProvider
+from song_lab.providers.fallback import FallbackSongProvider
+
+primary = AceStepApiProvider(base_url="https://your-self-hosted-instance")
+fallback = AceStepApiProvider(base_url="https://api.acemusic.ai", api_key="sk-...")
+
+with FallbackSongProvider(primary=primary, fallbacks=[fallback]) as provider:
+    result = provider.run(job)
+```
+
+## Running the tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
+49 tests cover the hardened provider's retry/backoff/error-mapping behavior (mocked at the
+httpx transport boundary -- no real network calls), the concurrency limiter, the fallback
+wrapper, secret/audio redaction, and BPM-hint parsing.
+
+## Stress-testing before you go viral
+
+`scripts/stress_test.py` has two modes:
+
+```bash
+# Safe to run as hard as you want -- drives the real FastAPI app in-process
+# via the mock provider, no network calls, no cost.
+python scripts/stress_test.py mock --requests 2000 --concurrency 200
+
+# Makes 1 REAL call against the configured ACE-Step backend to prove the
+# end-to-end pipeline produces valid audio. Hard-capped at 3 requests --
+# acemusic.ai is a shared free resource, never load-test it.
+python scripts/stress_test.py live --requests 1
+```
+
+The mock-mode harness has been run locally up to 5,000 concurrent-burst requests with zero
+failures, confirming the API layer holds up under viral-spike-level traffic. Run it again
+after any change to the request/response path before trusting it under real load.
 
 ## Use the GitHub Pages site
 

@@ -9,7 +9,7 @@ from song_lab.audio.jobs import SongJob
 from song_lab.improve import improve_package
 from song_lab.pipeline import build_conversion_package
 from song_lab.presets import STYLE_PRESETS
-from song_lab.providers.ace_step_api import AceStepApiProvider
+from song_lab.providers.ace_step_api import AceStepApiError, AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
 from song_lab.scoring import VersionScore, append_score
 
@@ -139,6 +139,8 @@ def mock_audio_command(package_path: str, output_dir: str, duration: int) -> Non
 @click.option("--duration", default=90, show_default=True, type=int, help="Target song duration in seconds.")
 @click.option("--format", "audio_format", default="mp3", show_default=True, help="Output audio format, e.g. mp3 or wav.")
 @click.option("--vocal-language", default="ar", show_default=True, help="Vocal language code for lyrics.")
+@click.option("--bpm-hint", default=None, type=int, help="Optional target BPM. Defaults to the package's bpm_hint if present.")
+@click.option("--candidates", default=1, show_default=True, type=click.IntRange(1, 4), help="Generate N takes and keep the one closest to the requested duration.")
 def ace_audio_command(
     package_path: str,
     output_dir: str,
@@ -148,17 +150,23 @@ def ace_audio_command(
     duration: int,
     audio_format: str,
     vocal_language: str,
+    bpm_hint: int | None,
+    candidates: int,
 ) -> None:
     """Generate real audio using a running ACE-Step API server."""
     package_data = _read_package(package_path)
-    provider = AceStepApiProvider(
-        base_url=base_url,
-        api_key=api_key,
-        model=model,
-        audio_format=audio_format,
-        vocal_language=vocal_language,
-    )
-    result = provider.run(_job_from_package(package_data, output_dir, duration))
+    try:
+        with AceStepApiProvider(
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            audio_format=audio_format,
+            vocal_language=vocal_language,
+            candidates=candidates,
+        ) as provider:
+            result = provider.run(_job_from_package(package_data, output_dir, duration, bpm_hint))
+    except AceStepApiError as exc:
+        raise click.ClickException(f"ACE-Step generation failed: {exc}") from exc
     click.echo(result.model_dump_json(indent=2))
 
 
@@ -233,18 +241,20 @@ def _read_package(package_path: str) -> dict:
     return json.loads(Path(package_path).read_text(encoding="utf-8"))
 
 
-def _job_from_package(package_data: dict, output_dir: str, duration: int) -> SongJob:
+def _job_from_package(package_data: dict, output_dir: str, duration: int, bpm_hint: int | None = None) -> SongJob:
     prompt = package_data.get("music_prompt", "").strip()
     lyrics = package_data.get("lyric_adaptation_prompt", "").strip()
 
     if not prompt:
         raise click.ClickException("Package is missing music_prompt.")
 
+    resolved_bpm_hint = bpm_hint if bpm_hint is not None else package_data.get("bpm_hint")
     return SongJob(
         prompt=prompt,
         lyrics=lyrics,
         output_dir=Path(output_dir),
         duration_seconds=duration,
+        bpm_hint=resolved_bpm_hint,
     )
 
 

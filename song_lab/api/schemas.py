@@ -22,6 +22,7 @@ class GenerateRequest(BaseModel):
     package_path: Path
     output_dir: Path = Path("outputs/audio")
     duration: int = Field(default=90, ge=10, le=600)
+    bpm_hint: int | None = Field(default=None, ge=40, le=220)
 
 
 class AceGenerateRequest(GenerateRequest):
@@ -30,6 +31,7 @@ class AceGenerateRequest(GenerateRequest):
     model: str = "acestep-v15-turbo"
     audio_format: str = "mp3"
     vocal_language: str = "ar"
+    candidates: int = Field(default=1, ge=1, le=4, description="Number of takes to generate; the closest match to the requested duration is selected automatically.")
 
 
 class TextAceGenerateRequest(TextPackageRequest):
@@ -41,6 +43,7 @@ class TextAceGenerateRequest(TextPackageRequest):
     model: str = "acestep-v15-turbo"
     audio_format: str = "mp3"
     vocal_language: str = "ar"
+    candidates: int = Field(default=1, ge=1, le=4, description="Number of takes to generate; the closest match to the requested duration is selected automatically.")
 
 
 class ScoreRequest(BaseModel):

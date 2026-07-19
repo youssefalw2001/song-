@@ -27,6 +27,7 @@ def build_conversion_package(source_text: str, style_key: str) -> ConversionPack
         scoring_rubric=build_scoring_rubric(),
         iteration_checklist=build_iteration_checklist(),
         legal_safety_note=LEGAL_SAFETY_NOTE,
+        bpm_hint=style.bpm_midpoint,
     )
 
 
