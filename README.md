@@ -11,6 +11,10 @@ song -- into a catchy, shareable, real AI-generated song in English.
 - Direct text-to-audio API routes
 - English viral/occasion-first style presets (diss tracks, dancehall roasts, birthday
   anthems, love confessions, breakup anthems, hype anthems, sad lo-fi, country story songs)
+- Best-of-N autopilot planner: when `AUTOPILOT_API_KEY` is set, generates several distinct
+  candidate lyric/hook concepts per request in one call and automatically selects the most
+  specific, quotable, and safe one via a deterministic heuristic judge -- no second LLM call
+  needed. See "Autopilot: best-of-N + judge" below.
 - Lyric adaptation prompt builder
 - Music generation prompt builder
 - Vocal direction prompt builder
@@ -38,6 +42,44 @@ will work against that backend. Budget for this before assuming a $0 generation 
 **Never commit a real key or paste one into chat/logs.** Set it as an environment variable
 (`export ACEMUSIC_API_KEY=...`) or in a git-ignored `.env` file only. Any key that has been
 pasted into a chat, ticket, or log should be treated as compromised and rotated immediately.
+
+## Autopilot: best-of-N + judge
+
+`song_lab/autopilot.py` turns a raw user prompt into a full song plan (style, lyrics, hook,
+caption). There are two paths:
+
+- **No `AUTOPILOT_API_KEY`/`OPENAI_API_KEY` set:** uses the offline template planner
+  (`_prompt_only_fallback`) -- fast, free, zero network calls, but the lyrics/hook are drawn
+  from a fixed set of templates per style. Good for testing; not the "perfect and authentic"
+  experience.
+- **API key set:** requests `AUTOPILOT_CANDIDATE_COUNT` (default 3) genuinely different
+  candidate concepts from the LLM in a single call, each with its own angle/hook/joke. Every
+  candidate is scored by `song_lab/candidate_scoring.py` -- a pure, deterministic, offline
+  heuristic judge that rewards specificity (does it actually use the names/details the user
+  gave it, not generic filler?), penalizes known generic filler phrases, checks for a
+  chantable hook repeated at least twice, and disqualifies anything that trips a narrow set
+  of hard safety rules (self-harm incitement, explicit threats, leaked personal contact
+  info) regardless of how well it scores otherwise. The highest-scoring eligible candidate
+  is what actually reaches the user. If every candidate is disqualified or the LLM call
+  fails for any reason (auth, rate limit, timeout, malformed response), the whole thing
+  degrades to the offline template planner automatically -- a visitor never sees a hard
+  error.
+
+This is the standard "best-of-N + judge" pattern for lifting LLM output quality without a
+second, slower/costlier LLM call to act as the judge. Configure it via:
+
+```text
+AUTOPILOT_API_KEY=sk-...            # or OPENAI_API_KEY
+AUTOPILOT_API_URL=...                # optional, defaults to OpenAI chat completions
+AUTOPILOT_MODEL=gpt-4.1-mini          # optional
+AUTOPILOT_CANDIDATE_COUNT=3           # optional, how many candidates to generate per request
+AUTOPILOT_MAX_RETRIES=2               # optional, retry attempts on transient failures
+```
+
+The safety disqualification list is intentionally narrow and is a defense-in-depth secondary
+check, not the primary control -- the LLM system prompt is the primary safety instruction.
+Production deployments handling arbitrary user content should also integrate a dedicated
+moderation API for broader hate-speech/slur coverage.
 
 ### Verified live end-to-end
 

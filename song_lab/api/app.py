@@ -97,6 +97,10 @@ def list_styles() -> dict:
 
 @app.post("/autopilot/plan")
 def autopilot_plan(request: dict) -> dict:
+    # build_autopilot_plan never raises for LLM-side failures -- it degrades to the
+    # offline template planner internally (see song_lab/autopilot.py) so a visitor
+    # never sees a hard error just because the LLM call had a bad moment. This
+    # try/except only guards against genuinely malformed request payloads.
     try:
         return build_autopilot_plan(request)
     except Exception as exc:

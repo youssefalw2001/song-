@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import random
 import re
-import urllib.request
+import time
 from typing import Any
+
+import httpx
+
+from song_lab.candidate_scoring import select_best_candidate
+from song_lab.observability import get_logger, log_with_context, safe_context
+
+logger = get_logger(__name__)
 
 STYLE_KEYS = [
     "dancehall_roast_anthem",
@@ -23,8 +32,56 @@ DEFAULT_NEGATIVE = (
     "copied artist voice, karaoke cover, hate speech, slurs, attacks on protected characteristics"
 )
 
+# Retryable HTTP failures: transient overload/rate-limiting. 4xx client errors
+# other than 429 (bad request, invalid key) indicate a problem a retry cannot
+# fix and must fail fast instead of burning attempts.
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+_DEFAULT_CANDIDATE_COUNT = 3
 
-def build_autopilot_plan(payload: dict[str, Any]) -> dict[str, Any]:
+
+class AutopilotApiError(RuntimeError):
+    """Base error for all autopilot LLM call failures."""
+
+
+class AutopilotAuthError(AutopilotApiError):
+    """Raised on 401/403 -- invalid or missing API key. Never retried."""
+
+
+class AutopilotClientError(AutopilotApiError):
+    """Raised on non-retryable 4xx responses. Never retried."""
+
+
+class AutopilotRateLimitedError(AutopilotApiError):
+    """Raised on 429 after retries are exhausted."""
+
+
+class AutopilotServerError(AutopilotApiError):
+    """Raised on 5xx after retries are exhausted."""
+
+
+class AutopilotTimeoutError(AutopilotApiError):
+    """Raised when a request exceeds its timeout after retries are exhausted."""
+
+
+class AutopilotInvalidResponseError(AutopilotApiError):
+    """Raised when the API returns 200 but the payload is missing or malformed."""
+
+
+def build_autopilot_plan(
+    payload: dict[str, Any],
+    client: httpx.Client | None = None,
+    candidate_count: int | None = None,
+) -> dict[str, Any]:
+    """Build a song plan from a raw user prompt.
+
+    When an LLM API key is configured, this requests several candidate
+    lyric/hook concepts in a single call and runs them through the
+    deterministic heuristic judge (song_lab/candidate_scoring.py) to select
+    the most specific, quotable, on-brief one automatically -- this is the
+    best-of-N + judge pattern, not a single one-shot guess. Falls back to
+    the offline template planner if no key is configured, or if the LLM
+    call fails for any reason, so a visitor never sees a hard error.
+    """
     user_prompt = str(payload.get("idea") or payload.get("prompt") or "").strip()
     mode = str(payload.get("mode") or "auto").strip().lower()
     avoid = payload.get("avoid") or []
@@ -33,9 +90,14 @@ def build_autopilot_plan(payload: dict[str, Any]) -> dict[str, Any]:
 
     api_key = os.getenv("AUTOPILOT_API_KEY") or os.getenv("OPENAI_API_KEY")
     if api_key:
+        resolved_count = candidate_count or int(os.getenv("AUTOPILOT_CANDIDATE_COUNT", str(_DEFAULT_CANDIDATE_COUNT)))
         try:
-            return _llm_plan(user_prompt=user_prompt, mode=mode, avoid=avoid, api_key=api_key)
+            return _llm_plan(user_prompt=user_prompt, mode=mode, avoid=avoid, api_key=api_key, client=client, candidate_count=resolved_count)
         except Exception as exc:
+            log_with_context(
+                logger, logging.WARNING, "Autopilot LLM planning failed; falling back to the offline template planner",
+                error_type=type(exc).__name__, error=str(exc),
+            )
             plan = _prompt_only_fallback(user_prompt=user_prompt, mode=mode)
             plan["planner"] = "prompt_only_fallback_after_llm_error"
             plan["planner_error"] = str(exc)[:260]
@@ -43,59 +105,186 @@ def build_autopilot_plan(payload: dict[str, Any]) -> dict[str, Any]:
     return _prompt_only_fallback(user_prompt=user_prompt, mode=mode)
 
 
-def _llm_plan(user_prompt: str, mode: str, avoid: list[Any], api_key: str) -> dict[str, Any]:
-    url = os.getenv("AUTOPILOT_API_URL", "https://api.openai.com/v1/chat/completions")
-    model = os.getenv("AUTOPILOT_MODEL", "gpt-4.1-mini")
-    system = (
-        "You are an expert AI music prompt builder for a viral, shareable song platform. The user gives one "
-        "open prompt describing an occasion: a diss/roast track, a birthday song, a love confession, a breakup "
-        "anthem, a hype/motivation anthem, sad lo-fi feels, or a country story song. Infer everything from the "
-        "prompt only: who/what it's about, vocal style, genre fusion, tempo, instruments, structure, lyrics, "
-        "and mix. Return valid JSON only. Make every result fresh and specific to the user's prompt -- lean "
-        "into specific names, inside jokes, and real details the user gives you. "
+def _build_system_prompt() -> str:
+    """System prompt for the candidate-generating LLM call.
+
+    Incorporates two research-backed songwriting principles beyond the
+    original version: (1) dimensional specificity -- combining style +
+    emotion + instruments + era + production + vocal traits produces more
+    consistent, higher-quality output than a single vague genre word (see
+    the ACE-Step prompt-engineering literature); (2) TikTok-hook structure --
+    the most shareable hooks front-load a concrete, specific detail (a name,
+    a real event) rather than a generic affirmation, because generic lines
+    are what get skipped past rather than quoted back.
+    """
+    return (
+        "You are an expert songwriter and AI music prompt builder for a viral, shareable song platform. "
+        "The user gives one open prompt describing an occasion: a diss/roast track, a birthday song, a love "
+        "confession, a breakup anthem, a hype/motivation anthem, sad lo-fi feels, or a country story song. "
+        "Infer everything from the prompt only: who/what it's about, vocal style, genre fusion, tempo, "
+        "instruments, structure, lyrics, and mix.\n\n"
+        "SPECIFICITY IS THE ENTIRE JOB. A song that could apply to any prompt in the same style is a failure, "
+        "even if it is well-written. Every candidate must:\n"
+        "- Use the actual names, inside jokes, events, and details the user gives you -- never swap in a generic "
+        "placeholder line instead.\n"
+        "- Open the hook with something concrete and specific, not a generic affirmation. 'Jake blew the "
+        "game-winner, we still bring it up' beats 'You had one shot and you blew it twice' -- the first is "
+        "impossible to reuse for anyone else's song, the second is a template.\n"
+        "- Combine multiple dimensions when describing the sound: genre AND era AND production texture AND "
+        "vocal character AND emotion -- 'mid-2000s dancehall riddim with a playful sing-rap flow' produces a "
+        "far more consistent result than just 'dancehall'.\n"
+        "- Repeat the hook at least twice across the song (once in the Hook section, once in a Hook Repeat) so "
+        "it is genuinely chantable and memorable, not a one-off line.\n"
+        "- Use clear [Intro]/[Verse]/[Hook]/[Hook Repeat] section tags.\n\n"
+        "Return valid JSON only, in the required shape, containing MULTIPLE independent candidate concepts as "
+        "instructed in the user message -- do not converge on one 'safe' idea across candidates; give each "
+        "candidate a genuinely different angle, hook, or joke so the best one can be selected afterward.\n\n"
         "Use broad music descriptions only. Do not copy real songs, melodies, lyrics, beats, artist voices, "
-        "arrangements, or artist likenesses. "
-        "Lyrics must be natural, singable, catchy, and not cringe, written in English. If this is a diss/roast "
-        "track, keep it playful and clever, never hateful, never targeting protected characteristics -- it "
-        "should read as a joke between friends, not real harassment."
+        "arrangements, or artist likenesses. Lyrics must be natural, singable, catchy, and not cringe, written "
+        "in English. If this is a diss/roast track, keep it playful and clever, never hateful, never targeting "
+        "protected characteristics, never a real threat -- it should read as a joke between friends, not real "
+        "harassment."
     )
-    shape = {
-        "planner": "llm_prompt_only",
+
+
+def _candidate_shape() -> dict[str, Any]:
+    return {
         "style": "one valid backend style id",
         "creative_angle": "specific to the user's prompt",
         "mood": "specific mood",
         "trend_dna": "specific style DNA, no artist copying",
-        "instrumental_notes": "specific instruments and production notes",
+        "instrumental_notes": "specific instruments and production notes, combining genre + era + texture",
         "voice_direction": "voice gender, delivery, singing or rap style",
         "tempo": "BPM/groove recommendation",
         "structure": "short structure with hook timing",
         "concept": "clear concept from user prompt",
-        "lyrics": "complete lyrics with sections",
+        "lyrics": "complete lyrics with [Intro]/[Verse]/[Hook]/[Hook Repeat] sections, hook repeated at least twice",
         "caption": "social caption",
         "hashtags": ["#AIMusic"],
-        "story_text": "short screen text",
+        "story_text": "the hook line itself, short and quotable",
         "meme_text": "optional alternate text",
         "video_idea": "visual/posting idea",
-        "why": ["why this fits"],
+        "why": ["why this specific angle fits"],
         "duration": 45,
+    }
+
+
+def _llm_plan(
+    user_prompt: str,
+    mode: str,
+    avoid: list[Any],
+    api_key: str,
+    client: httpx.Client | None,
+    candidate_count: int,
+) -> dict[str, Any]:
+    url = os.getenv("AUTOPILOT_API_URL", "https://api.openai.com/v1/chat/completions")
+    model = os.getenv("AUTOPILOT_MODEL", "gpt-4.1-mini")
+    max_retries = int(os.getenv("AUTOPILOT_MAX_RETRIES", "2"))
+
+    response_shape = {
+        "planner": "llm_best_of_n",
+        "candidates": [_candidate_shape() for _ in range(candidate_count)],
+    }
+    user_content = {
+        "user_prompt": user_prompt,
+        "mode": mode,
+        "avoid": avoid[-6:],
+        "candidate_count": candidate_count,
+        "required_json_shape": response_shape,
+        "valid_style_ids": STYLE_KEYS,
+        "instruction": f"Produce exactly {candidate_count} candidates in the 'candidates' array, each with a genuinely different angle/hook/joke.",
     }
     body = {
         "model": model,
         "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": json.dumps({"user_prompt": user_prompt, "mode": mode, "avoid": avoid[-6:], "required_json_shape": shape, "valid_style_ids": STYLE_KEYS}, ensure_ascii=False)},
+            {"role": "system", "content": _build_system_prompt()},
+            {"role": "user", "content": json.dumps(user_content, ensure_ascii=False)},
         ],
-        "temperature": 0.95,
+        "temperature": 1.0,
         "response_format": {"type": "json_object"},
     }
-    req = urllib.request.Request(url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), method="POST")
-    req.add_header("Content-Type", "application/json")
-    req.add_header("Authorization", f"Bearer {api_key}")
-    with urllib.request.urlopen(req, timeout=20) as response:
-        raw = response.read().decode("utf-8", errors="ignore")
-    data = json.loads(raw)
-    content = data["choices"][0]["message"]["content"]
-    return _normalize_plan(json.loads(content), user_prompt=user_prompt, planner="llm_prompt_only")
+
+    owns_client = client is None
+    active_client = client or httpx.Client(timeout=httpx.Timeout(connect=5.0, read=30.0, write=10.0, pool=5.0))
+    try:
+        raw_response = _post_with_retry(active_client, url, body, api_key, max_retries)
+    finally:
+        if owns_client:
+            active_client.close()
+
+    try:
+        choice = (raw_response.get("choices") or [{}])[0]
+        content = choice["message"]["content"]
+        parsed = json.loads(content)
+    except (KeyError, IndexError, json.JSONDecodeError) as exc:
+        raise AutopilotInvalidResponseError(f"Autopilot LLM response was not in the expected shape: {safe_context(raw_response)}") from exc
+
+    candidates = parsed.get("candidates")
+    if not candidates or not isinstance(candidates, list):
+        # Tolerate a model that ignored the multi-candidate instruction and
+        # returned one flat plan directly -- treat it as a single candidate
+        # rather than failing outright.
+        if isinstance(parsed, dict) and parsed.get("lyrics"):
+            candidates = [parsed]
+        else:
+            raise AutopilotInvalidResponseError(f"Autopilot LLM response contained no usable candidates: {safe_context(parsed)}")
+
+    normalized_candidates = [_normalize_plan(dict(candidate), user_prompt=user_prompt, planner="llm_best_of_n") for candidate in candidates]
+
+    try:
+        best_candidate, all_scores = select_best_candidate(normalized_candidates, source_prompt=user_prompt)
+    except ValueError as exc:
+        raise AutopilotInvalidResponseError(f"All candidates failed safety/quality checks: {exc}") from exc
+
+    log_with_context(
+        logger, logging.INFO, "Selected best-of-N autopilot candidate",
+        candidate_count=len(normalized_candidates),
+        winning_score=next((s.score for cand, s in zip(normalized_candidates, all_scores) if cand is best_candidate), None),
+    )
+
+    best_candidate["planner"] = "llm_best_of_n"
+    best_candidate["candidate_count"] = len(normalized_candidates)
+    return best_candidate
+
+
+def _post_with_retry(client: httpx.Client, url: str, body: dict[str, Any], api_key: str, max_retries: int) -> dict[str, Any]:
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            response = client.post(url, json=body, headers=headers)
+        except httpx.TimeoutException as exc:
+            if attempt > max_retries:
+                raise AutopilotTimeoutError(f"Autopilot request to {url} timed out after {attempt} attempt(s): {exc}") from exc
+            _sleep_backoff(attempt)
+            continue
+        except httpx.TransportError as exc:
+            if attempt > max_retries:
+                raise AutopilotApiError(f"Could not reach autopilot API at {url} after {attempt} attempt(s): {exc}") from exc
+            _sleep_backoff(attempt)
+            continue
+
+        if response.status_code in (401, 403):
+            raise AutopilotAuthError(f"Autopilot authentication failed: HTTP {response.status_code}")
+        if response.status_code in _RETRYABLE_STATUS_CODES:
+            if attempt > max_retries:
+                error_cls = AutopilotRateLimitedError if response.status_code == 429 else AutopilotServerError
+                raise error_cls(f"Autopilot request failed after {attempt} attempt(s): HTTP {response.status_code}")
+            _sleep_backoff(attempt)
+            continue
+        if response.status_code >= 400:
+            raise AutopilotClientError(f"Autopilot request rejected: HTTP {response.status_code}: {safe_context(response.text)[:300]}")
+
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise AutopilotInvalidResponseError(f"Autopilot response was not valid JSON: {exc}") from exc
+
+
+def _sleep_backoff(attempt: int) -> None:
+    delay = min(10.0, 1.0 * (2 ** (attempt - 1)))
+    time.sleep(delay + random.uniform(0, delay * 0.25))
 
 
 def _prompt_only_fallback(user_prompt: str, mode: str) -> dict[str, Any]:
