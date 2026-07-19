@@ -11,6 +11,10 @@ song -- into a catchy, shareable, real AI-generated song in English.
 - Direct text-to-audio API routes
 - English viral/occasion-first style presets (diss tracks, dancehall roasts, birthday
   anthems, love confessions, breakup anthems, hype anthems, sad lo-fi, country story songs)
+- **Lyrics-first curated-sound flow (primary UX):** the user writes the lyrics (with
+  fill-in-the-blank starter templates) and taps to pick a vocal style, beat, vibe, voice,
+  and tempo. The backend composes those choices into a tuned ACE-Step prompt and generates
+  via the reliable hand-written-lyrics path. See "Lyrics-first flow" below.
 - **Zero-external-LLM default (ACE-Step authors its own lyrics):** a prompt becomes a
   complete, unique song -- lyrics, hook, caption, and audio -- with no external LLM key
   required. Python does the deterministic occasion -> style -> brief structuring; ACE-Step's
@@ -47,6 +51,34 @@ will work against that backend. Budget for this before assuming a $0 generation 
 **Never commit a real key or paste one into chat/logs.** Set it as an environment variable
 (`export ACEMUSIC_API_KEY=...`) or in a git-ignored `.env` file only. Any key that has been
 pasted into a chat, ticket, or log should be treated as compromised and rotated immediately.
+
+## Lyrics-first flow (primary experience)
+
+The most reliable and controllable way to make a song, and the default frontend flow. The
+user supplies the words; the app curates the sound. No LLM writes lyrics, so there's no slow
+chain-of-thought authoring step -- it uses ACE-Step's original hand-written-lyrics path.
+
+Three steps:
+1. **Write the lyrics.** A guided editor pre-seeds `[Verse]`/`[Chorus]` structure, and
+   fill-in-the-blank starter templates (birthday, roast, love, hype) let a user edit a
+   working song instead of facing a blank page.
+2. **Pick the sound.** Tap-to-choose chips for vocal style / accent (Jamaican Dancehall,
+   Bollywood, UK Drill, Southern Country, Auto-Tune Trap, Smooth R&B, Afrobeats,
+   Dramatic/Opera), beat/genre (trap, dancehall, drill, afrobeat, lo-fi, pop, R&B, EDM,
+   country, boom-bap), vibe, plus voice / tempo / length toggles. A live summary line shows
+   the chosen sound.
+3. **Generate.** One take, fail-fast retries, real vocals in ~1-3 minutes.
+
+Under the hood, `song_lab/sound_options.py` holds the curated menus and `compose_style()`, a
+pure function that fuses the choices into one tuned ACE-Step style prompt and resolves a BPM
+(tempo picks a slow/medium/fast anchor within each genre's range). Every fragment is
+hand-written and tested so any combination reads like a coherent studio brief; unknown keys
+fall back to sensible defaults rather than crashing. The `/generate/from-lyrics` route builds
+a `SongJob` with `author_lyrics=False` (the tagged `<prompt>`+`<lyrics>` path) and the same
+fail-fast retry policy as the other generation routes. `GET /sound-options` exposes the menus
+and lyric starters for the frontend. Accents are framed as celebrated musical vocal styles (a
+sound you choose), never a mocking impression of a person, and the no-hate guardrail stays in
+place.
 
 ## ACE-Step authors its own lyrics (default, zero external LLM)
 

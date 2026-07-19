@@ -132,6 +132,23 @@ textarea{min-height:88px;resize:vertical}
 .make-btn-wrap{margin-top:18px}
 .result-note{color:var(--muted-soft);font-size:12.5px;text-align:center;margin-top:12px}
 
+/* ============================= LYRICS-FIRST FLOW ============================= */
+.step-block{margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border-soft)}
+.step-block:last-of-type{border-bottom:0}
+.step-label{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:600;font-size:17px;margin-bottom:14px}
+.step-num{width:27px;height:27px;flex:0 0 auto;border-radius:50%;background:var(--grad-brand);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;box-shadow:var(--shadow-glow)}
+.starter-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.starter-btn{border:1px dashed var(--border);background:transparent;color:var(--muted);border-radius:10px;padding:8px 13px;font-size:12.5px;font-weight:600}
+.starter-btn:hover{border-color:var(--accent-3);color:var(--text);transform:translateY(-1px)}
+.opt-group{margin-bottom:16px}
+.opt-title{font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:9px;letter-spacing:.02em}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--border);background:var(--surface-2);color:var(--muted);border-radius:999px;padding:9px 15px;font-size:13.5px;font-weight:600}
+.chip:hover{border-color:var(--accent-2);color:var(--text);transform:translateY(-1px)}
+.chip.is-active{background:var(--grad-brand);color:#fff;border-color:transparent;box-shadow:0 8px 20px -10px rgba(255,45,149,.6)}
+.sound-summary{margin-top:14px;padding:13px 15px;border:1px solid var(--border-soft);border-radius:12px;background:var(--bg-soft);color:var(--text);font-size:13.5px;font-weight:600}
+.sound-summary b{color:var(--accent-3)}
+
 /* ============================= STAGE / LOADING ============================= */
 .stage{display:none;text-align:center;margin-top:22px}
 .stage.is-active{display:block}
@@ -251,7 +268,7 @@ footer a:hover{color:var(--text)}
   <section id="picker">
     <div class="section-head">
       <h2>Pick your vibe</h2>
-      <p>Tap one — we'll pre-fill a starter idea for you to edit.</p>
+      <p>Tap one — we'll load starter lyrics and dial in a matching sound you can tweak.</p>
     </div>
     <div class="occasion-grid" id="occasionGrid"></div>
   </section>
@@ -262,8 +279,8 @@ footer a:hover{color:var(--text)}
       <p>Three steps. No music skills required.</p>
     </div>
     <div class="steps">
-      <div class="step"><div class="num">01</div><h3>Pick your vibe</h3><p>Diss track, birthday, love confession, hype anthem — 8 styles built for sharing.</p></div>
-      <div class="step"><div class="num">02</div><h3>Describe the idea</h3><p>Names, inside jokes, real details. The more specific, the more it slaps.</p></div>
+      <div class="step"><div class="num">01</div><h3>Write the words</h3><p>Type your lyrics, or tap a starter template and swap in the names and details.</p></div>
+      <div class="step"><div class="num">02</div><h3>Pick the sound</h3><p>Tap a vocal style, beat and vibe — Jamaican dancehall, Bollywood, trap, R&B and more.</p></div>
       <div class="step"><div class="num">03</div><h3>Get your banger</h3><p>Real vocals, real beat, ready to send or post in a couple of minutes.</p></div>
     </div>
   </section>
@@ -271,18 +288,40 @@ footer a:hover{color:var(--text)}
   <section id="create" class="create-wrap">
     <div class="section-head" style="margin-top:0">
       <h2>Make your song</h2>
-      <p>Just describe it. We'll write the lyrics, pick the beat, and record the vocal.</p>
+      <p>Write the words. Pick the sound. We record the vocal. That's it.</p>
     </div>
 
     <div class="create-card">
-      <label for="userIdea">Your idea</label>
-      <textarea id="userIdea" class="biginput" placeholder="A diss track roasting my friend Jake for missing the game-winning shot, dancehall style, savage but funny, 45 seconds..."></textarea>
-      <p class="idea-hint">💡 Tip: a name + one specific detail (an inside joke, a real moment) makes it hit way harder.</p>
-
-      <div class="make-btn-wrap">
-        <button id="makeSongBtn" class="btn big" type="button">Make My Banger 🔥</button>
+      <!-- STEP 1 — LYRICS -->
+      <div class="step-block">
+        <div class="step-label"><span class="step-num">1</span> Write your lyrics</div>
+        <div class="starter-row" id="starterRow"></div>
+        <textarea id="lyricsInput" class="biginput" placeholder="[Verse 1]&#10;Type your first lines here...&#10;&#10;[Chorus]&#10;And your catchy hook here..."></textarea>
+        <p class="idea-hint">💡 Use <b>[Verse]</b> and <b>[Chorus]</b> tags. Short lines that rhyme hit hardest. New to this? Tap a starter above to fill a template you can edit.</p>
       </div>
-      <p class="result-note">Real vocals take about 1–3 minutes to record. Hang tight — no login, no credit card.</p>
+
+      <!-- STEP 2 — SOUND -->
+      <div class="step-block">
+        <div class="step-label"><span class="step-num">2</span> Pick your sound</div>
+        <div class="opt-group"><div class="opt-title">🎤 Vocal style</div><div class="chips" id="accentChips"></div></div>
+        <div class="opt-group"><div class="opt-title">🥁 Beat</div><div class="chips" id="genreChips"></div></div>
+        <div class="opt-group"><div class="opt-title">🎭 Vibe</div><div class="chips" id="vibeChips"></div></div>
+        <div class="row3">
+          <div class="opt-group"><div class="opt-title">🎙 Voice</div><div class="chips" id="voiceChips"></div></div>
+          <div class="opt-group"><div class="opt-title">⚡ Tempo</div><div class="chips" id="tempoChips"></div></div>
+          <div class="opt-group"><div class="opt-title">⏱ Length</div><div class="chips" id="lengthChips"></div></div>
+        </div>
+        <div class="sound-summary" id="soundSummary">Your sound: —</div>
+      </div>
+
+      <!-- STEP 3 — MAKE -->
+      <div class="step-block" style="border-bottom:0;padding-bottom:0">
+        <div class="step-label"><span class="step-num">3</span> Get your banger</div>
+        <div class="make-btn-wrap" style="margin-top:0">
+          <button id="makeSongBtn" class="btn big" type="button">Make My Banger 🔥</button>
+        </div>
+        <p class="result-note">Real vocals take about 1–3 minutes to record. Hang tight — no login, no credit card.</p>
+      </div>
 
       <div class="stage" id="stage">
         <div class="stage-text" id="stageText">🎤 Writing your hook...</div>
@@ -437,23 +476,26 @@ function renderOccasionGrid(){
       <span class="blurb">${occ.blurb}</span>
     </button>`).join('');
   grid.querySelectorAll('.occasion-card').forEach(btn=>{
-    btn.addEventListener('click', ()=>selectOccasion(occasions.find(o=>o.key===btn.dataset.key)));
+    btn.addEventListener('click', ()=>selectOccasion(btn.dataset.key));
   });
 }
 
-function selectOccasion(occ){
+function selectOccasion(occKey){
   document.querySelectorAll('.occasion-card').forEach(c=>{
-    const active = c.dataset.key === occ.key;
+    const active = c.dataset.key === occKey;
     c.classList.toggle('is-selected', active);
     c.setAttribute('aria-pressed', String(active));
   });
-  $('autopilotMode').value = occ.mode;
-  $('style').value = occ.key;
-  const ta = $('userIdea');
-  if(!ta.value.trim()){ ta.value = occ.starter; }
-  renderKit();
+  const preset = occasionPreset[occKey];
+  if(preset){
+    ['accent','genre','vibe','voice','tempo'].forEach(k=>{ if(preset[k]) choice[k] = preset[k]; });
+    const ta = $('lyricsInput');
+    if(!ta.value.trim()){ ta.value = STARTERS[preset.starter] ? STARTERS[preset.starter].lyrics : BLANK_LYRICS; }
+    renderAllChips();
+    updateSoundSummary();
+  }
   document.getElementById('create').scrollIntoView({behavior:'smooth', block:'start'});
-  setTimeout(()=>ta.focus(), 350);
+  setTimeout(()=>$('lyricsInput').focus(), 350);
 }
 
 /* ============================= STATUS / ERROR HELPERS (dev panel) ============================= */
@@ -499,7 +541,8 @@ async function health(){ try{ if(!checkBackendWarning()) return; const res=await
 async function createPlan(promptOverride){
   try{
     if(!checkBackendWarning()) return false;
-    const prompt = (promptOverride !== undefined ? promptOverride : $('userIdea').value).trim();
+    const ideaSrc = $('userIdea') || $('lyricsInput');
+    const prompt = (promptOverride !== undefined ? promptOverride : (ideaSrc ? ideaSrc.value : '')).trim();
     if(!prompt){ setStatus('Type the song idea first.'); return false; }
     setStatus('AI helper is building fresh settings from your prompt...');
     const body={idea:prompt+'\nPrompt detail: '+$('aiStrictness').value, mode:$('autopilotMode').value, avoid};
@@ -547,25 +590,106 @@ function payload(){
   return body;
 }
 
-// The one-click flow sends the user's raw idea straight to ACE-Step's author mode.
-// The backend fuses the idea + the chosen style preset + safety rules into a brief and
-// ACE-Step's own model writes the lyrics -- no planner round-trip, no external LLM, and
-// only ONE take so it comes back fast and reliably.
-function autoPayload(prompt){
+/* ============================= LYRICS-FIRST FLOW: OPTIONS + STATE ============================= */
+// Client-side mirror of song_lab/sound_options.py. Kept in sync so the UI renders
+// instantly without a network call; the backend re-validates every key anyway.
+const SOUND = {
+  accents:[
+    {key:'jamaican',label:'Jamaican Dancehall'},{key:'bollywood',label:'Bollywood / Indian'},
+    {key:'uk_drill',label:'UK Drill'},{key:'country',label:'Southern Country'},
+    {key:'autotune_trap',label:'Auto-Tune Trap'},{key:'rnb_smooth',label:'Smooth R&B'},
+    {key:'afrobeats',label:'Afrobeats'},{key:'dramatic',label:'Dramatic / Opera'}
+  ],
+  genres:[
+    {key:'trap',label:'Trap'},{key:'dancehall',label:'Dancehall / Reggae'},{key:'drill',label:'Drill'},
+    {key:'afrobeat',label:'Afrobeat'},{key:'lofi',label:'Lo-fi'},{key:'pop',label:'Pop'},
+    {key:'rnb',label:'R&B'},{key:'edm',label:'EDM'},{key:'country',label:'Country'},{key:'boombap',label:'Boom-bap'}
+  ],
+  vibes:[
+    {key:'funny',label:'Funny'},{key:'savage',label:'Savage / Diss'},{key:'romantic',label:'Romantic'},
+    {key:'sad',label:'Sad'},{key:'hype',label:'Hype'},{key:'chill',label:'Chill'},
+    {key:'dark',label:'Dark'},{key:'triumphant',label:'Triumphant'}
+  ],
+  voices:[{key:'male',label:'Male'},{key:'female',label:'Female'},{key:'duet',label:'Duet'}],
+  tempos:[{key:'slow',label:'Slow'},{key:'medium',label:'Medium'},{key:'fast',label:'Fast'}],
+  lengths:[{key:30,label:'30s'},{key:45,label:'45s'},{key:60,label:'60s'}]
+};
+const labelFor = (list, key) => (list.find(o=>String(o.key)===String(key))||{}).label || key;
+
+// Current selections (defaults mirror the backend defaults).
+const choice = {accent:'rnb_smooth', genre:'pop', vibe:'hype', voice:'male', tempo:'medium', length:45};
+
+// Fill-in-the-blank lyric starters (mirror of backend LYRIC_STARTERS). [BRACKETS] = swap in.
+const STARTERS = {
+  birthday:{label:'🎉 Birthday', lyrics:"[Verse 1]\nWake up [name], it's finally your day\n[age] years strong and you did it your way\n[Chorus]\nHappy birthday, let the whole world know\nThis one's for you, it's your time to glow\n[Verse 2]\nBlow out the candles, make the wish come true\nEverybody's here 'cause they love you"},
+  diss:{label:'😈 Roast a friend', lyrics:"[Verse 1]\nYo [name], let me put you on the spot\nYou said you were the best but you really are not\n[Chorus]\nAll talk, no game, that's just how you are\n[name], you a legend? Nah, not by far\n[Verse 2]\nRemember [funny thing they did]? We still laugh about that\nSit down my friend, and that's a fact"},
+  love:{label:'💌 Love song', lyrics:"[Verse 1]\nFrom the moment I met you, [name], I just knew\nEvery little thing feels better with you\n[Chorus]\nYou're my favorite feeling, my every day\n[name], I'm not letting you slip away\n[Verse 2]\n[a memory you share together] plays in my mind\nA love like ours is so hard to find"},
+  hype:{label:'🔥 Hype anthem', lyrics:"[Verse 1]\nLights on, it's go time, no more waiting around\n[your goal] on my mind, I'm not backing down\n[Chorus]\nWe up, we up, can't stop us now\nWatch me get it, I'ma show you how\n[Verse 2]\nEvery setback was a setup for this\nNow I'm locked in, there's nothing I'll miss"}
+};
+const BLANK_LYRICS = "[Verse 1]\n\n\n[Chorus]\n\n\n[Verse 2]\n";
+
+// Occasion card -> a starter + a tuned sound preset (ties the vibe picker to the new flow).
+const occasionPreset = {
+  diss_track_trap:      {starter:'diss',     accent:'autotune_trap', genre:'trap',      vibe:'savage',     voice:'male',   tempo:'medium'},
+  dancehall_roast_anthem:{starter:'diss',    accent:'jamaican',      genre:'dancehall', vibe:'funny',      voice:'male',   tempo:'fast'},
+  birthday_banger_pop:  {starter:'birthday', accent:'rnb_smooth',    genre:'pop',       vibe:'hype',       voice:'female', tempo:'fast'},
+  love_confession_rnb:  {starter:'love',     accent:'rnb_smooth',    genre:'rnb',       vibe:'romantic',   voice:'male',   tempo:'slow'},
+  breakup_anthem_pop:   {starter:'love',     accent:'rnb_smooth',    genre:'pop',       vibe:'triumphant', voice:'female', tempo:'medium'},
+  hype_motivation_anthem:{starter:'hype',    accent:'autotune_trap', genre:'trap',      vibe:'hype',       voice:'male',   tempo:'medium'},
+  sad_lofi_feels:       {starter:'love',     accent:'rnb_smooth',    genre:'lofi',      vibe:'sad',        voice:'male',   tempo:'slow'},
+  country_story_love:   {starter:'love',     accent:'country',       genre:'country',   vibe:'romantic',   voice:'male',   tempo:'medium'}
+};
+
+function renderChips(containerId, list, choiceKey){
+  const el = $(containerId); if(!el) return;
+  el.innerHTML = list.map(o=>`<button type="button" class="chip${String(choice[choiceKey])===String(o.key)?' is-active':''}" data-val="${o.key}">${o.label}</button>`).join('');
+  el.querySelectorAll('.chip').forEach(btn=>btn.addEventListener('click', ()=>{
+    const raw = btn.dataset.val;
+    choice[choiceKey] = (choiceKey==='length') ? Number(raw) : raw;
+    renderChips(containerId, list, choiceKey);
+    updateSoundSummary();
+  }));
+}
+function renderAllChips(){
+  renderChips('accentChips', SOUND.accents, 'accent');
+  renderChips('genreChips',  SOUND.genres,  'genre');
+  renderChips('vibeChips',   SOUND.vibes,   'vibe');
+  renderChips('voiceChips',  SOUND.voices,  'voice');
+  renderChips('tempoChips',  SOUND.tempos,  'tempo');
+  renderChips('lengthChips', SOUND.lengths, 'length');
+}
+function renderStarters(){
+  const row = $('starterRow'); if(!row) return;
+  row.innerHTML = '<span style="align-self:center;color:var(--muted-soft);font-size:12.5px;margin-right:2px">Need a starting point?</span>' +
+    Object.entries(STARTERS).map(([k,v])=>`<button type="button" class="starter-btn" data-starter="${k}">${v.label}</button>`).join('');
+  row.querySelectorAll('.starter-btn').forEach(btn=>btn.addEventListener('click', ()=>{
+    $('lyricsInput').value = STARTERS[btn.dataset.starter].lyrics;
+    $('lyricsInput').focus();
+  }));
+}
+function updateSoundSummary(){
+  $('soundSummary').innerHTML = 'Your sound: <b>' + labelFor(SOUND.accents, choice.accent) + '</b> \u00b7 ' +
+    labelFor(SOUND.genres, choice.genre) + ' \u00b7 ' + labelFor(SOUND.vibes, choice.vibe) + ' \u00b7 ' +
+    labelFor(SOUND.voices, choice.voice) + ' voice \u00b7 ' + labelFor(SOUND.tempos, choice.tempo) + ' \u00b7 ' +
+    labelFor(SOUND.lengths, choice.length);
+}
+
+function lyricsPayload(lyrics){
   return {
-    text: prompt,
-    lyrics: '',
-    author_lyrics: true,
-    style: $('style').value || 'hype_motivation_anthem',
-    source_label: 'bangr_oneclick',
-    duration: Math.min(60, Math.max(20, Number($('duration').value) || 40)),
-    base_url: 'https://api.acemusic.ai',
-    model: 'acestep-v15-turbo',
-    audio_format: $('format').value || 'mp3',
-    vocal_language: 'en',
-    output_dir: 'outputs/audio',
-    candidates: 1
+    lyrics,
+    accent: choice.accent, genre: choice.genre, vibe: choice.vibe,
+    voice: choice.voice, tempo: choice.tempo, duration: Number(choice.length)||45,
+    base_url:'https://api.acemusic.ai', model:'acestep-v15-turbo',
+    audio_format:'mp3', vocal_language:'en', candidates:1
   };
+}
+
+const genreTags = {trap:['#trap','#bars'],dancehall:['#dancehall','#reggae'],drill:['#drill','#ukdrill'],afrobeat:['#afrobeats'],lofi:['#lofi','#chill'],pop:['#pop'],rnb:['#rnb'],edm:['#edm','#dance'],country:['#country'],boombap:['#hiphop']};
+const vibeTags = {funny:['#funnysong'],savage:['#disstrack','#roast'],romantic:['#lovesong'],sad:['#sadsong'],hype:['#hype','#gymmusic'],chill:['#chillvibes'],dark:['#dark'],triumphant:['#anthem']};
+function captionFor(){
+  const tags = [...(genreTags[choice.genre]||[]), ...(vibeTags[choice.vibe]||[]), '#AImusic','#BANGR','#fyp'];
+  const line = `Made this ${labelFor(SOUND.vibes,choice.vibe).toLowerCase()} ${labelFor(SOUND.genres,choice.genre).toLowerCase()} banger on BANGR 🎤`;
+  return `${line}\n\n${tags.join(' ')}`;
 }
 
 const styleHashtags = {
@@ -629,14 +753,41 @@ async function generate(bodyOverride){
     return ok;
   }catch(e){ setError('Generate failed.',e); return false; }
 }
+// Lyrics-first generation: user wrote the words, backend composes the sound and uses
+// the reliable hand-written-lyrics path (no LM authoring).
+async function generateLyrics(body){
+  try{
+    setStatus('Generating...');
+    const data=await post('/generate/from-lyrics',body,360000);
+    const ok=showAudio(data);
+    showLyricsResult(data);
+    $('fullBox').textContent=JSON.stringify(data,null,2);
+    setStatus(ok?'Generated. Audio is ready.':'Generation returned no playable audio.',ok);
+    return ok;
+  }catch(e){ setError('Generate failed.',e); return false; }
+}
+function showLyricsResult(data){
+  const lyrics = (data && data.lyrics) ? data.lyrics : $('lyricsInput').value.trim();
+  $('lyricsBox').textContent = lyrics || '—';
+  const caption = captionFor();
+  const summary = (data && data.sound && data.sound.summary) ? data.sound.summary : '';
+  $('tiktokBox').textContent = `Caption:\n${caption}` + (summary ? `\n\nSound: ${summary}` : '');
+  lastAuthored = {lyrics, caption: $('tiktokBox').textContent};
+}
 async function pasteAndGenerate(){ if(pastePlan()) return await generate(); return false; }
 async function mock(){ try{ renderKit(); const data=await post('/generate/from-text/mock',payload()); $('fullBox').textContent=JSON.stringify(data,null,2)+'\n\n--- PROMPT USED ---\n'+kit().full; setStatus('Mock works. Manual path is alive.',true); }catch(e){ setError('Mock failed.',e); } }
 async function copyText(text,label,btn){ try{ await navigator.clipboard.writeText(text); setStatus(`${label} copied.`,true); if(btn){ const original=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>btn.textContent=original,1400); } }catch(e){ setStatus('Copy failed.'); } }
 
 /* ============================= ONE-BUTTON ORCHESTRATOR (the whole product) ============================= */
 async function makeSong(){
-  const prompt = $('userIdea').value.trim();
-  if(!prompt){ $('userIdea').focus(); $('userIdea').style.borderColor = 'var(--bad)'; setTimeout(()=>{ $('userIdea').style.borderColor=''; }, 1200); return; }
+  const lyrics = $('lyricsInput').value.trim();
+  if(!lyrics){
+    $('lyricsInput').focus();
+    $('lyricsInput').style.borderColor = 'var(--bad)';
+    setTimeout(()=>{ $('lyricsInput').style.borderColor=''; }, 1200);
+    setStatus('Write a few lines of lyrics first — or tap a starter template.');
+    return;
+  }
 
   showResultError(false);
   showResult(false);
@@ -644,11 +795,10 @@ async function makeSong(){
   startStageSequence();
 
   try{
-    // One step: hand the idea + chosen style straight to ACE-Step's author mode.
-    // No planner call, no template juggling -- the backend builds the brief and
-    // ACE-Step writes the lyrics itself. Fewer moving parts = far fewer failures.
+    // Reliable path: the user's own lyrics + a composed sound. No LM authoring,
+    // no planner round-trip -- fewest moving parts, so the fewest ways to fail.
     lastPlan = null;
-    const generated = await generate(autoPayload(prompt));
+    const generated = await generateLyrics(lyricsPayload(lyrics));
     if(!generated){ throw new Error($('errorBox').textContent || 'Generation did not return playable audio.'); }
 
     showResult(true);
@@ -665,46 +815,25 @@ async function makeSong(){
 async function regenerate(){ await makeSong(); }
 
 function startOver(){
-  $('userIdea').value = '';
+  $('lyricsInput').value = '';
   document.querySelectorAll('.occasion-card').forEach(c=>{ c.classList.remove('is-selected'); c.setAttribute('aria-pressed','false'); });
   showResult(false);
   showResultError(false);
   document.getElementById('picker').scrollIntoView({behavior:'smooth'});
 }
 
+// Copy exactly what the user sees in the caption box (robust across both flows).
 function copyCaption(){
-  const tags = (lastPlan && lastPlan.hashtags && lastPlan.hashtags.length) ? lastPlan.hashtags : defaultHashtags($('style').value);
-  let caption = '';
-  if(lastAuthored && lastAuthored.caption){
-    caption = `${lastAuthored.caption}\n\n${tags.join(' ')}`;
-  } else if(lastPlan){
-    caption = `${lastPlan.caption||''}\n\n${tags.join(' ')}`;
-  } else {
-    caption = tags.join(' ');
-  }
-  copyText(caption.trim() || 'No caption yet.', 'Caption', $('copyCaptionBtn'));
+  const t = ($('tiktokBox').textContent || '').trim();
+  copyText(t && t !== '—' ? t : 'No caption yet.', 'Caption', $('copyCaptionBtn'));
 }
-
-/* ============================= ROTATING PLACEHOLDER (cosmetic only) ============================= */
-const placeholderExamples = [
-  'A diss track roasting my friend for showing up late to everything, dancehall style, funny...',
-  'A birthday song for my sister turning 25, joyful and big singalong chorus...',
-  'A love confession for someone I have liked for a year, sincere R&B...',
-  'A breakup anthem about finally moving on, starts sad ends triumphant...',
-  'A hype anthem before a big presentation, confident chest-out energy...'
-];
-let placeholderIndex = 0;
-setInterval(()=>{
-  const ta = $('userIdea');
-  if(document.activeElement !== ta && !ta.value.trim()){
-    placeholderIndex = (placeholderIndex + 1) % placeholderExamples.length;
-    ta.placeholder = placeholderExamples[placeholderIndex];
-  }
-}, 3400);
 
 /* ============================= INIT ============================= */
 window.addEventListener('DOMContentLoaded',()=>{
   renderOccasionGrid();
+  renderStarters();
+  renderAllChips();
+  updateSoundSummary();
   $('backend').value = localStorage.getItem('songLabBackendOverride') || '';
   $('backend').addEventListener('change', ()=>{ localStorage.setItem('songLabBackendOverride', $('backend').value.trim()); checkBackendWarning(); });
   $('aiTab').onclick = ()=>showTab('ai');
@@ -723,7 +852,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('regenerateBtn').onclick = regenerate;
   $('startOverBtn').onclick = startOver;
   $('copyCaptionBtn').onclick = copyCaption;
-  $('userIdea').addEventListener('keydown', (e)=>{ if(e.key==='Enter' && (e.metaKey||e.ctrlKey)){ makeSong(); } });
+  $('lyricsInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter' && (e.metaKey||e.ctrlKey)){ makeSong(); } });
 
   checkBackendWarning();
   renderKit();

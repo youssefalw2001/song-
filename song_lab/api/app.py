@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from song_lab.api.schemas import AceGenerateRequest, GenerateRequest, ImproveRequest, ScoreRequest, TextAceGenerateRequest, TextPackageRequest
+from song_lab.api.schemas import AceGenerateRequest, GenerateRequest, ImproveRequest, LyricsGenerateRequest, ScoreRequest, TextAceGenerateRequest, TextPackageRequest
 from song_lab.audio.jobs import SongJob, SongJobResult
 from song_lab.autopilot import build_autopilot_plan
 from song_lab.improve import improve_package
@@ -22,6 +22,15 @@ from song_lab.presets import STYLE_PRESETS
 from song_lab.providers.ace_step_api import AceStepApiError, AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
 from song_lab.scoring import VersionScore, append_score
+from song_lab.sound_options import (
+    GENRES,
+    LYRIC_STARTERS,
+    TEMPOS,
+    VIBES,
+    VOCAL_STYLES,
+    VOICES,
+    compose_style,
+)
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 FRONTEND_INDEX = ROOT_DIR / "docs" / "index.html"
@@ -231,6 +240,79 @@ def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
     except AceStepApiError as exc:
         raise HTTPException(status_code=502, detail=f"ACE-Step generation failed: {exc}") from exc
     return {"package": data, "generation": _result_with_url(result)}
+
+
+@app.post("/generate/from-lyrics")
+def generate_from_lyrics(request: LyricsGenerateRequest) -> dict:
+    """Lyrics-first flow: the user wrote the words, we compose the sound.
+
+    The accent/genre/vibe/voice/tempo choices are composed deterministically into
+    a tuned ACE-Step style prompt, and generation uses the hand-written-lyrics
+    (tagged) path -- author_lyrics=False -- which is the most reliable ACE-Step
+    route and skips the slow LM lyric-authoring step entirely.
+    """
+    lyrics = request.lyrics.strip()
+    if not lyrics:
+        raise HTTPException(status_code=400, detail="Lyrics are required -- write at least a line or two.")
+
+    composed = compose_style(
+        accent=request.accent,
+        genre=request.genre,
+        vibe=request.vibe,
+        voice=request.voice,
+        tempo=request.tempo,
+    )
+    job = SongJob(
+        prompt=composed.prompt,
+        lyrics=lyrics,
+        output_dir=request.output_dir,
+        duration_seconds=request.duration,
+        bpm_hint=composed.bpm,
+        author_lyrics=False,
+    )
+
+    generate_max_retries = int(os.getenv("ACESTEP_GENERATE_MAX_RETRIES", "1"))
+    try:
+        with AceStepApiProvider(
+            base_url=request.base_url,
+            api_key=request.api_key,
+            model=request.model,
+            audio_format=request.audio_format,
+            vocal_language=request.vocal_language,
+            candidates=request.candidates,
+            max_retries=generate_max_retries,
+        ) as provider:
+            result = provider.run(job)
+    except AceStepApiError as exc:
+        raise HTTPException(status_code=502, detail=f"ACE-Step generation failed: {exc}") from exc
+
+    return {
+        "sound": {
+            "prompt": composed.prompt,
+            "bpm": composed.bpm,
+            "summary": composed.summary,
+            "accent": composed.vocal_style,
+            "genre": composed.genre,
+            "vibe": composed.vibe,
+            "voice": composed.voice,
+            "tempo": composed.tempo,
+        },
+        "lyrics": lyrics,
+        "generation": _result_with_url(result),
+    }
+
+
+@app.get("/sound-options")
+def sound_options() -> dict:
+    """Expose the curated menus so the frontend can render the option chips."""
+    return {
+        "accents": [{"key": v.key, "label": v.label, "suggested_genres": list(v.suggested_genres)} for v in VOCAL_STYLES.values()],
+        "genres": [{"key": g.key, "label": g.label} for g in GENRES.values()],
+        "vibes": [{"key": v.key, "label": v.label} for v in VIBES.values()],
+        "voices": [{"key": k, "label": label} for k, label in VOICES.items()],
+        "tempos": [{"key": k, "label": k.capitalize()} for k in TEMPOS],
+        "lyric_starters": [{"key": k, "label": v["label"], "lyrics": v["lyrics"]} for k, v in LYRIC_STARTERS.items()],
+    }
 
 
 @app.post("/generate/from-audio/ace")

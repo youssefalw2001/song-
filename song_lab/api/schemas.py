@@ -55,6 +55,29 @@ class TextAceGenerateRequest(TextPackageRequest):
     candidates: int = Field(default=1, ge=1, le=4, description="Number of takes to generate; the closest match to the requested duration is selected automatically.")
 
 
+class LyricsGenerateRequest(BaseModel):
+    """The lyrics-first flow: the user writes the words, then taps to pick the sound.
+
+    The backend composes accent/genre/vibe/voice/tempo into a tuned ACE-Step style
+    prompt and generates via the reliable hand-written-lyrics path (no LM authoring).
+    """
+
+    lyrics: str = Field(..., min_length=1, description="The user's own lyrics, ideally with [Verse]/[Chorus] section tags.")
+    accent: str = Field(default="rnb_smooth", description="Vocal style key from sound_options.VOCAL_STYLES.")
+    genre: str = Field(default="pop", description="Beat/genre key from sound_options.GENRES.")
+    vibe: str = Field(default="hype", description="Mood key from sound_options.VIBES.")
+    voice: str = Field(default="male", description="Voice key: male, female, or duet.")
+    tempo: str = Field(default="medium", description="Tempo key: slow, medium, or fast.")
+    duration: int = Field(default=45, ge=10, le=600)
+    output_dir: Path = Path("outputs/audio")
+    base_url: str = "http://127.0.0.1:8001"
+    api_key: str | None = None
+    model: str = "acestep-v15-turbo"
+    audio_format: str = "mp3"
+    vocal_language: str = "en"
+    candidates: int = Field(default=1, ge=1, le=4, description="Number of takes to generate; the closest match to the requested duration is selected automatically.")
+
+
 class ScoreRequest(BaseModel):
     artifact: str
     version_label: str
