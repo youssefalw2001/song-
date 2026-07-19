@@ -529,7 +529,10 @@ function kit(){ const s=styleMeta[$('style').value]||styleMeta.hype_motivation_a
 function renderKit(){ const k=kit(); $('fullBox').textContent=k.full; }
 function payload(){
   const k=kit();
-  const body = {text:k.styleText,lyrics:k.lyrics,style:$('style').value,source_label:'bangr_v12',duration:Number($('duration').value||45),base_url:'https://api.acemusic.ai',model:'acestep-v15-turbo',audio_format:$('format').value||'mp3',vocal_language:$('language').value||'en',output_dir:'outputs/audio',candidates:2};
+  // author_lyrics:true is the product default -- ACE-Step's own built-in LM writes
+  // the lyrics/hook from the brief the backend builds, so we do NOT send hand-written
+  // lyrics here. No external LLM is required for a complete, unique song.
+  const body = {text:k.styleText,lyrics:'',author_lyrics:true,style:$('style').value,source_label:'bangr_v12',duration:Number($('duration').value||45),base_url:'https://api.acemusic.ai',model:'acestep-v15-turbo',audio_format:$('format').value||'mp3',vocal_language:$('language').value||'en',output_dir:'outputs/audio',candidates:2};
   // Forward this specific song's creative fields from the autopilot plan (when one
   // exists) so the backend merges them into the music/vocal prompt on top of the
   // style preset -- this is what makes two songs in the same style (e.g. two diss
@@ -545,6 +548,18 @@ function payload(){
 }
 async function post(path,body){ if(!checkBackendWarning()) throw new Error('Backend not configured.'); const res=await fetch(`${backend()}${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'}); const text=await res.text(); let data; try{data=JSON.parse(text)}catch{data={raw:text}} if(!res.ok) throw new Error(`HTTP ${res.status}\n${JSON.stringify(data,null,2)}`); return data; }
 function showAudio(data){ const gen=data&&data.generation?data.generation:data; if(gen&&gen.audio_url){ const absolute=new URL(gen.audio_url,backend()).href; $('audio').src=absolute; $('audioLink').href=absolute; $('audio').load(); return true; } return false; }
+let lastAuthored = null;
+// When ACE-Step's own LM authored the lyrics/caption (author mode), show that real
+// output instead of the planner's placeholder lyrics -- these are the actual words in
+// the finished song. Falls back silently to the plan when author fields are empty.
+function showAuthored(data){
+  const gen = data && data.generation ? data.generation : data;
+  const lyrics = gen && gen.authored_lyrics ? gen.authored_lyrics.trim() : '';
+  const caption = gen && gen.authored_caption ? gen.authored_caption.trim() : '';
+  lastAuthored = (lyrics || caption) ? {lyrics, caption} : null;
+  if(lyrics){ $('lyricsBox').textContent = lyrics; }
+  if(caption){ $('tiktokBox').textContent = `Caption:\n${caption}\n\nHashtags:\n${(lastPlan&&lastPlan.hashtags?lastPlan.hashtags:[]).join(' ')}`; }
+}
 
 async function generate(){
   try{
@@ -552,6 +567,7 @@ async function generate(){
     setStatus('Generating...');
     const data=await post('/generate/from-text/ace',payload());
     const ok=showAudio(data);
+    showAuthored(data);
     $('fullBox').textContent=JSON.stringify(data,null,2)+'\n\n--- PROMPT USED ---\n'+kit().full;
     setStatus(ok?'Generated. Audio is ready.':'Generation returned no playable audio.',ok);
     return ok;
@@ -604,8 +620,13 @@ function startOver(){
 }
 
 function copyCaption(){
-  const caption = lastPlan ? `${lastPlan.caption||''}\n\n${(lastPlan.hashtags||[]).join(' ')}` : '';
-  copyText(caption || 'No caption yet.', 'Caption', $('copyCaptionBtn'));
+  let caption = '';
+  if(lastAuthored && lastAuthored.caption){
+    caption = `${lastAuthored.caption}\n\n${(lastPlan&&lastPlan.hashtags?lastPlan.hashtags:[]).join(' ')}`;
+  } else if(lastPlan){
+    caption = `${lastPlan.caption||''}\n\n${(lastPlan.hashtags||[]).join(' ')}`;
+  }
+  copyText(caption.trim() || 'No caption yet.', 'Caption', $('copyCaptionBtn'));
 }
 
 /* ============================= ROTATING PLACEHOLDER (cosmetic only) ============================= */

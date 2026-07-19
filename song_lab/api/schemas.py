@@ -41,6 +41,10 @@ class AceGenerateRequest(GenerateRequest):
 
 class TextAceGenerateRequest(TextPackageRequest):
     lyrics: str = ""
+    author_lyrics: bool = Field(
+        default=True,
+        description="When True (the product default), ACE-Step's own built-in LM authors the lyrics/hook from a natural-language brief -- no external LLM needed. Set False (and pass `lyrics`) to keep the hand-written tagged path.",
+    )
     output_dir: Path = Path("outputs/audio")
     duration: int = Field(default=90, ge=10, le=600)
     base_url: str = "http://127.0.0.1:8001"

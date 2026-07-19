@@ -17,7 +17,7 @@ from song_lab.api.schemas import AceGenerateRequest, GenerateRequest, ImproveReq
 from song_lab.audio.jobs import SongJob, SongJobResult
 from song_lab.autopilot import build_autopilot_plan
 from song_lab.improve import improve_package
-from song_lab.pipeline import build_conversion_package
+from song_lab.pipeline import build_conversion_package, build_song_brief
 from song_lab.presets import STYLE_PRESETS
 from song_lab.providers.ace_step_api import AceStepApiError, AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
@@ -185,10 +185,22 @@ def generate_from_text_mock(request: TextAceGenerateRequest) -> dict:
 
 @app.post("/generate/from-text/ace")
 def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
-    package = _package_from_text_request(request.text, request.style, request.source_label, _plan_from_request(request))
+    plan = _plan_from_request(request)
+    package = _package_from_text_request(request.text, request.style, request.source_label, plan)
     data = package.model_dump()
     if request.lyrics.strip():
         data["lyric_adaptation_prompt"] = request.lyrics.strip()
+
+    # Author mode (product default): build a natural-language brief from the
+    # user's idea + the style scaffold + the optional plan, and let ACE-Step's
+    # own LM write the lyrics/hook -- no external LLM. A user who supplies their
+    # own lyrics and turns author_lyrics off keeps the hand-written path.
+    author_lyrics = bool(request.author_lyrics and not request.lyrics.strip())
+    brief = ""
+    if author_lyrics:
+        brief = build_song_brief(STYLE_PRESETS[request.style], request.text, plan)
+        data["song_brief"] = brief
+
     try:
         with AceStepApiProvider(
             base_url=request.base_url,
@@ -198,7 +210,15 @@ def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
             vocal_language=request.vocal_language,
             candidates=request.candidates,
         ) as provider:
-            result = provider.run(_job_from_package(data, request.output_dir, request.duration))
+            result = provider.run(
+                _job_from_package(
+                    data,
+                    request.output_dir,
+                    request.duration,
+                    author_lyrics=author_lyrics,
+                    brief=brief,
+                )
+            )
     except AceStepApiError as exc:
         raise HTTPException(status_code=502, detail=f"ACE-Step generation failed: {exc}") from exc
     return {"package": data, "generation": _result_with_url(result)}
@@ -300,13 +320,28 @@ def _read_package(package_path: Path) -> dict:
     return json.loads(package_path.read_text(encoding="utf-8"))
 
 
-def _job_from_package(package_data: dict, output_dir: Path, duration: int, bpm_hint: int | None = None) -> SongJob:
+def _job_from_package(
+    package_data: dict,
+    output_dir: Path,
+    duration: int,
+    bpm_hint: int | None = None,
+    author_lyrics: bool = False,
+    brief: str = "",
+) -> SongJob:
     prompt = package_data.get("music_prompt", "").strip()
     lyrics = package_data.get("lyric_adaptation_prompt", "").strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Package is missing music_prompt")
     resolved_bpm_hint = bpm_hint if bpm_hint is not None else package_data.get("bpm_hint")
-    return SongJob(prompt=prompt, lyrics=lyrics, output_dir=output_dir, duration_seconds=duration, bpm_hint=resolved_bpm_hint)
+    return SongJob(
+        prompt=prompt,
+        lyrics=lyrics,
+        output_dir=output_dir,
+        duration_seconds=duration,
+        bpm_hint=resolved_bpm_hint,
+        author_lyrics=author_lyrics,
+        brief=brief,
+    )
 
 
 def _result_with_url(result: SongJobResult) -> dict:

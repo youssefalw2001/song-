@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import random
+import re
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -178,6 +179,11 @@ class AceStepApiProvider(SongProvider):
                     "downloaded_path": str(best.path),
                     "candidate_count": len(candidates),
                 }
+                authored_caption, authored_lyrics = ("", "")
+                if job.author_lyrics and job.brief.strip():
+                    authored_caption, authored_lyrics = self._parse_authored_content(response)
+                metadata["authored_caption"] = authored_caption
+                metadata["authored_lyrics"] = authored_lyrics
                 metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
                 return SongJobResult(
                     provider=self.name,
@@ -186,6 +192,8 @@ class AceStepApiProvider(SongProvider):
                     metadata_path=metadata_path,
                     message=f"ACE-Step completion API generated {len(candidates)} candidate(s); selected best match.",
                     candidates=candidates,
+                    authored_caption=authored_caption,
+                    authored_lyrics=authored_lyrics,
                 )
 
             if source_audio_path:
@@ -237,9 +245,25 @@ class AceStepApiProvider(SongProvider):
         cover_strength: float | None = None,
     ) -> tuple[list[AudioCandidate], dict[str, Any]]:
         model = self._completion_model_id(self.model)
-        content = f"<prompt>{job.prompt}</prompt>"
-        if job.lyrics:
-            content += f"<lyrics>{job.lyrics}</lyrics>"
+
+        # Author mode: hand ACE-Step's own built-in LM a natural-language brief
+        # and let it write the caption/prompt and lyrics itself (sample_mode).
+        # No hand-written <lyrics> tag is sent -- the LM authors them. The
+        # tagged path below is kept byte-identical for backward compatibility
+        # when author mode is off.
+        # The AceMusic completion API parses the message content for a <prompt>
+        # tag even in sample_mode -- a bare free-text body is rejected with
+        # "No input provided in messages". So the brief is wrapped in <prompt>
+        # (verified live against api.acemusic.ai); the difference from the
+        # tagged path is that no hand-written <lyrics> tag is sent, which is
+        # what makes ACE-Step's own LM author the lyrics/hook itself.
+        author_mode = bool(job.author_lyrics and job.brief.strip())
+        if author_mode:
+            content = f"<prompt>{job.brief.strip()}</prompt>"
+        else:
+            content = f"<prompt>{job.prompt}</prompt>"
+            if job.lyrics:
+                content += f"<lyrics>{job.lyrics}</lyrics>"
 
         if source_audio_path:
             audio_format = source_audio_path.suffix.lstrip(".").lower() or "mp3"
@@ -270,7 +294,7 @@ class AceStepApiProvider(SongProvider):
             "stream": False,
             "thinking": self.thinking,
             "use_format": self.use_format,
-            "sample_mode": False,
+            "sample_mode": author_mode,
             "use_cot_caption": True,
             "use_cot_language": True,
             "batch_size": self.candidates,
@@ -510,6 +534,55 @@ class AceStepApiProvider(SongProvider):
             self._download_file(data_url, output_path)
             return
         output_path.write_bytes(base64.b64decode(data_url))
+
+    @staticmethod
+    def _parse_authored_content(response: dict[str, Any]) -> tuple[str, str]:
+        """Extract the LM-authored caption and lyrics from a sample_mode response.
+
+        ACE-Step's LM returns the text it authored in the assistant message
+        content, typically shaped like:
+
+            ## Metadata
+            **Caption:** upbeat dancehall, playful diss, 96 BPM ...
+            ## Lyrics
+            [Verse 1]
+            ...
+
+        Parsing is best-effort and never raises: audio generation already
+        succeeded by the time this runs, so a missing or differently-shaped
+        text block must not fail the whole job -- it just yields empty
+        strings for whichever piece could not be found.
+        """
+        choice = (response.get("choices") or [{}])[0]
+        content = (choice.get("message") or {}).get("content") or ""
+        if not isinstance(content, str) or not content.strip():
+            return "", ""
+
+        caption = ""
+        lyrics = ""
+        lyrics_lines: list[str] = []
+        section: str | None = None
+        for raw_line in content.splitlines():
+            line = raw_line.rstrip()
+            lowered = line.strip().lower()
+            if lowered.startswith("## "):
+                heading = lowered[3:].strip()
+                if heading.startswith("lyric"):
+                    section = "lyrics"
+                elif heading.startswith("metadata") or heading.startswith("caption"):
+                    section = "metadata"
+                else:
+                    section = None
+                continue
+            caption_match = re.match(r"^\s*\*{0,2}caption\*{0,2}\s*:\s*(.+)$", line, re.IGNORECASE)
+            if caption_match and not caption:
+                caption = caption_match.group(1).strip().strip("*").strip()
+                continue
+            if section == "lyrics":
+                lyrics_lines.append(line)
+
+        lyrics = "\n".join(lyrics_lines).strip()
+        return caption, lyrics
 
     @staticmethod
     def _completion_model_id(model: str) -> str:

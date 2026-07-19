@@ -11,10 +11,15 @@ song -- into a catchy, shareable, real AI-generated song in English.
 - Direct text-to-audio API routes
 - English viral/occasion-first style presets (diss tracks, dancehall roasts, birthday
   anthems, love confessions, breakup anthems, hype anthems, sad lo-fi, country story songs)
-- Best-of-N autopilot planner: when `AUTOPILOT_API_KEY` is set, generates several distinct
-  candidate lyric/hook concepts per request in one call and automatically selects the most
-  specific, quotable, and safe one via a deterministic heuristic judge -- no second LLM call
-  needed. See "Autopilot: best-of-N + judge" below.
+- **Zero-external-LLM default (ACE-Step authors its own lyrics):** a prompt becomes a
+  complete, unique song -- lyrics, hook, caption, and audio -- with no external LLM key
+  required. Python does the deterministic occasion -> style -> brief structuring; ACE-Step's
+  own built-in language model writes the actual lyrics via `sample_mode`. See "ACE-Step
+  authors its own lyrics" below.
+- Best-of-N autopilot planner (now fully optional/off-by-default): when `AUTOPILOT_API_KEY`
+  is set, generates several distinct candidate lyric/hook concepts per request in one call
+  and automatically selects the most specific, quotable, and safe one via a deterministic
+  heuristic judge -- no second LLM call needed. See "Autopilot: best-of-N + judge" below.
 - Lyric adaptation prompt builder
 - Music generation prompt builder
 - Vocal direction prompt builder
@@ -43,10 +48,46 @@ will work against that backend. Budget for this before assuming a $0 generation 
 (`export ACEMUSIC_API_KEY=...`) or in a git-ignored `.env` file only. Any key that has been
 pasted into a chat, ticket, or log should be treated as compromised and rotated immediately.
 
+## ACE-Step authors its own lyrics (default, zero external LLM)
+
+The product default needs **no external LLM key at all**. A raw prompt becomes a complete,
+one-of-a-kind song end to end using only the ACE-Step backend the platform already talks to:
+
+1. **Python structures the request deterministically.** `build_song_brief()` in
+   `song_lab/pipeline.py` is a pure function that fuses the user's idea, the chosen style
+   preset's scaffold (tempo, instruments, mood, vocal direction), any optional per-song plan
+   fields, and the safety guardrails into one natural-language brief. No network, no key,
+   fully testable.
+2. **ACE-Step's own built-in LM writes the lyrics and hook.** The brief is sent to the
+   AceMusic completion API with `sample_mode: true`, so ACE-Step's internal language model
+   authors the caption and lyrics itself, tailored to the prompt, then generates the audio in
+   the same call. There is no second, external LLM in this path.
+3. **The authored caption and lyrics are parsed back out** of the response and surfaced in the
+   API response (`authored_caption`, `authored_lyrics` on `SongJobResult`) and in the
+   frontend's "Show lyrics & details" panel -- these are the real words in the finished song.
+
+Wiring:
+
+- `SongJob.author_lyrics` (bool) + `SongJob.brief` (str) drive the behavior.
+- `TextAceGenerateRequest.author_lyrics` defaults to `True`. If a user supplies their own
+  `lyrics`, author mode is disabled automatically and the hand-written tagged path is used.
+- The provider wraps the brief in a `<prompt>` tag and omits the `<lyrics>` tag; with
+  `author_lyrics=False` the request is byte-for-byte identical to the previous behavior
+  (backward compatible).
+
+Verified live against `https://api.acemusic.ai`: a dancehall-roast brief produced a real
+2.6 MB MP3 plus a structured `[Intro]/[Verse]/[Chorus]` lyric sheet and a style caption,
+with no `AUTOPILOT_API_KEY` set. Note that ACE-Step's built-in LM is a small model and can
+drift off the exact topic; the optional autopilot planner below can be layered on for tighter
+lyrical control when a key is available.
+
 ## Autopilot: best-of-N + judge
 
 `song_lab/autopilot.py` turns a raw user prompt into a full song plan (style, lyrics, hook,
-caption). There are two paths:
+caption). It is now **fully optional and off by default** -- the "ACE-Step authors its own
+lyrics" path above is the zero-key default. Autopilot is only engaged when an API key is
+configured, and it degrades gracefully to the offline template planner otherwise. There are
+two paths:
 
 - **No `AUTOPILOT_API_KEY`/`OPENAI_API_KEY` set:** uses the offline template planner
   (`_prompt_only_fallback`) -- fast, free, zero network calls, but the lyrics/hook are drawn

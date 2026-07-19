@@ -17,6 +17,14 @@ class SongJob(BaseModel):
         le=220,
         description="Optional target BPM derived from a style preset. Forwarded to providers that document a BPM control.",
     )
+    author_lyrics: bool = Field(
+        default=False,
+        description="When True, ask the audio model's own LM to author the lyrics/hook from `brief` (ACE-Step sample_mode) instead of using hand-written `lyrics`. Requires a non-empty `brief`.",
+    )
+    brief: str = Field(
+        default="",
+        description="Natural-language song brief handed to the audio model's LM when author_lyrics is True.",
+    )
 
 
 class AudioCandidate(BaseModel):
@@ -39,4 +47,12 @@ class SongJobResult(BaseModel):
     candidates: list[AudioCandidate] = Field(
         default_factory=list,
         description="All validated candidates generated for this job. Empty for providers that don't report per-candidate detail (e.g. mock).",
+    )
+    authored_lyrics: str = Field(
+        default="",
+        description="Lyrics the audio model's own LM authored when author_lyrics was requested. Empty otherwise.",
+    )
+    authored_caption: str = Field(
+        default="",
+        description="Style caption the audio model's own LM authored when author_lyrics was requested. Empty otherwise.",
     )

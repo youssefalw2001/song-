@@ -104,6 +104,51 @@ Output format:
 """.strip()
 
 
+def build_song_brief(style: StylePreset, idea: str, plan: dict[str, Any] | None = None) -> str:
+    """Fuse the user's idea + style scaffold + guardrails into one natural-language brief.
+
+    This brief is what gets handed to ACE-Step's own built-in language model
+    (via sample_mode) so the model authors the actual lyrics and hook itself,
+    tailored to this specific prompt -- no external LLM required. Everything
+    the model needs is expressed in plain natural language rather than tags,
+    because sample_mode reads a free-text query: the occasion and the user's
+    concrete details (names, inside jokes, events), the musical style pulled
+    from the preset scaffold, the per-song creative direction from the
+    optional plan, and the safety guardrails.
+    """
+    plan = plan or {}
+    idea = (idea or "").strip()
+
+    instruments = ", ".join(style.instruments)
+    baseline_mood = ", ".join(style.mood)
+    plan_mood = str(plan.get(_PLAN_MOOD_KEY) or "").strip()
+    creative_angle = str(plan.get(_PLAN_CREATIVE_ANGLE_KEY) or "").strip()
+    trend_dna = str(plan.get(_PLAN_TREND_DNA_KEY) or "").strip()
+    instrumental_notes = str(plan.get(_PLAN_INSTRUMENTAL_NOTES_KEY) or "").strip()
+    voice_direction = str(plan.get(_PLAN_VOICE_DIRECTION_KEY) or "").strip()
+
+    mood = plan_mood or baseline_mood
+    angle = creative_angle or idea
+
+    lines = [
+        f"Write a complete, original {style.title}.",
+        f"What it is about: {idea}." if idea else "",
+        f"Specific creative angle: {angle}." if angle and angle != idea else "",
+        f"Musical style: {style.tempo_bpm} BPM, {instruments}.",
+        f"Extra instrumental direction: {instrumental_notes}." if instrumental_notes else "",
+        f"Style DNA: {trend_dna}." if trend_dna else "",
+        f"Mood: {mood}.",
+        f"Vocal delivery: {voice_direction or style.vocal_direction}",
+        "Structure the lyrics with clear [Intro], [Verse], [Hook], and a repeated [Hook] section, "
+        "and make the hook short, catchy, and quotable.",
+        "Keep it playful, clever, and PG-13. Never hateful, never slurs, never attacks on protected "
+        "characteristics, never a real threat -- a diss stays a joke between friends.",
+        "Fully original: do not copy real songs, melodies, lyrics, beats, or artist likenesses.",
+        "Write the lyrics in English.",
+    ]
+    return "\n".join(line for line in lines if line)
+
+
 def build_music_prompt(style: StylePreset, plan: dict[str, Any] | None = None) -> str:
     """Build the music-generation prompt sent to the audio model.
 
