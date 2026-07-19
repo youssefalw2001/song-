@@ -31,11 +31,13 @@ OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 TREND_STYLE_DNA = {
-    "golden_brown_desert_waltz": {"label": "Golden Brown-type desert waltz pattern", "profile": "sad_oud_guitar", "score": 91, "dna": "hypnotic 6/8 or 3/4 sway, plucked oud/qanbus idea, mysterious minor mood, elegant loop, slow cinematic movement, good for slowed edits", "safe_note": "Use broad mood/texture/rhythm feel only."},
-    "sweater_weather_cold_guitar": {"label": "Sweater Weather-type cold guitar indie pattern", "profile": "sad_oud_guitar", "score": 88, "dna": "cold-night guitar, intimate verse, nostalgic hook, moody bass, emotional simple chorus", "safe_note": "Use broad cold indie mood only."},
-    "master_of_none_slow_dream": {"label": "Master of None-type dreamy slow edit pattern", "profile": "dark_rnb_yemeni", "score": 89, "dna": "minimal dreamy groove, soft psychedelic atmosphere, loose slow pocket, warm haze, simple repeatable phrase", "safe_note": "Use broad dreamy/minimal atmosphere only."},
-    "nancy_ajram_pop_warmth": {"label": "Nancy Ajram-type warm Arabic pop pattern", "profile": "wedding_name", "score": 86, "dna": "warm Arabic pop brightness, catchy clean chorus, family-friendly emotion, elegant percussion", "safe_note": "Use broad Arabic pop warmth only."},
-    "masculine_yemeni_nasheed_edit": {"label": "Masculine Yemeni nasheed edit pattern", "profile": "nasheed_power", "score": 93, "dna": "deep male chant, name early, low drums, claps, oud/qanbus motif, heroic identity", "safe_note": "Fully original chant and melody only."},
+    "dancehall_roast_wave": {"label": "Dancehall roast/diss viral pattern", "profile": "dancehall_roast_anthem", "score": 93, "dna": "bouncy dancehall riddim, playful savage lyrics, group sing-back hook, meme-able ad-lib tag, made to be sent to the person it's about", "safe_note": "Playful roast energy only, never real hate speech or harassment."},
+    "trap_diss_punchline_wave": {"label": "Trap diss-track punchline pattern", "profile": "diss_track_trap", "score": 92, "dna": "half-time 808 trap beat, punchline-first bars, chantable hook, comedic-savage tone, built for group-chat sharing", "safe_note": "Comedic diss energy only, never real hate speech or harassment."},
+    "birthday_singalong_wave": {"label": "Birthday singalong anthem pattern", "profile": "birthday_banger_pop", "score": 87, "dna": "bright four-on-the-floor pop, name said early and often, big group-chant chorus, confetti energy", "safe_note": "Use broad celebratory pop pattern only."},
+    "love_confession_rnb_wave": {"label": "Sincere R&B love-confession pattern", "profile": "love_confession_rnb", "score": 85, "dna": "warm electric piano, intimate close-mic vocal, specific personal detail in the verse, soulful climb into the chorus", "safe_note": "Use broad sincere R&B pattern only."},
+    "breakup_glow_up_wave": {"label": "Breakup glow-up anthem pattern", "profile": "breakup_anthem_pop", "score": 88, "dna": "raw verse into a defiant, empowered pop-rock chorus, bittersweet-to-triumphant arc, big singalong hook", "safe_note": "Use broad empowerment-arc pattern only."},
+    "hype_lockin_wave": {"label": "Hype/motivation lock-in anthem pattern", "profile": "hype_motivation_anthem", "score": 90, "dna": "massive 808s, chant-rap hybrid delivery, riser into every hook, chest-out declarative lyrics", "safe_note": "Use broad hype-anthem pattern only."},
+    "sad_lofi_2am_wave": {"label": "Sad lo-fi 2am diary pattern", "profile": "sad_lofi_feels", "score": 84, "dna": "dusty lo-fi drums, warm vinyl texture, intimate detached vocal, quietly devastating hook, negative space in the mix", "safe_note": "Use broad lo-fi mood/texture only."},
 }
 
 LIVE_TREND_URLS = [
@@ -49,7 +51,7 @@ def _allowed_origins() -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-app = FastAPI(title="Arabic Song Conversion Lab", version="0.7.0")
+app = FastAPI(title="Viral Song Lab", version="0.8.0")
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 
 app.add_middleware(
@@ -123,7 +125,7 @@ def live_trend_scan() -> dict:
 
 def _extract_trend_terms(text: str) -> list[str]:
     lowered = re.sub(r"<[^>]+>", " ", text.lower())
-    phrases = ["slowed", "speed up", "sped up", "edit", "nostalgia", "2016", "guitar", "indie", "r&b", "arabic", "dance", "wedding", "viral", "golden brown", "sweater weather", "master of none", "nancy", "oud", "remix", "capcut"]
+    phrases = ["slowed", "speed up", "sped up", "edit", "nostalgia", "diss", "roast", "dancehall", "birthday", "breakup", "hype", "motivation", "lofi", "lo-fi", "r&b", "trap", "viral", "remix", "capcut"]
     found = []
     for phrase in phrases:
         if phrase in lowered and phrase not in found:
@@ -138,7 +140,15 @@ def _extract_trend_terms(text: str) -> list[str]:
 
 def _choose_trend_profile(text: str) -> dict:
     scores: dict[str, int] = {key: int(value["score"]) for key, value in TREND_STYLE_DNA.items()}
-    boosts = {"golden_brown_desert_waltz": ["golden brown", "waltz", "hypnotic", "nostalgia", "slowed"], "sweater_weather_cold_guitar": ["sweater weather", "guitar", "indie", "cold", "2016", "nostalgia"], "master_of_none_slow_dream": ["master of none", "dream", "psychedelic", "slow", "lo-fi", "edit"], "nancy_ajram_pop_warmth": ["nancy", "arabic", "pop", "dance", "wedding"], "masculine_yemeni_nasheed_edit": ["nasheed", "arabic", "edit", "slowed", "oud", "yemeni"]}
+    boosts = {
+        "dancehall_roast_wave": ["dancehall", "roast", "diss", "jamaican", "reggae", "viral"],
+        "trap_diss_punchline_wave": ["diss", "roast", "trap", "808", "punchline", "exposed"],
+        "birthday_singalong_wave": ["birthday", "bday", "party", "celebrate"],
+        "love_confession_rnb_wave": ["love", "crush", "r&b", "confession", "anniversary"],
+        "breakup_glow_up_wave": ["breakup", "ex", "glow up", "moving on"],
+        "hype_lockin_wave": ["hype", "motivation", "gym", "lock in", "pregame"],
+        "sad_lofi_2am_wave": ["sad", "lofi", "lo-fi", "2am", "lonely"],
+    }
     for key, words in boosts.items():
         for word in words:
             if word in text:
@@ -191,7 +201,7 @@ def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
 
 
 @app.post("/generate/from-audio/ace")
-def generate_from_audio_ace(audio: UploadFile = File(...), prompt: str = Form(...), lyrics: str = Form(""), duration: int = Form(120), base_url: str = Form("https://api.acemusic.ai"), api_key: str = Form(""), model: str = Form("acestep-v15-turbo"), audio_format: str = Form("mp3"), vocal_language: str = Form("ar"), task_type: str = Form("cover"), cover_strength: float = Form(0.55)) -> dict:
+def generate_from_audio_ace(audio: UploadFile = File(...), prompt: str = Form(...), lyrics: str = Form(""), duration: int = Form(120), base_url: str = Form("https://api.acemusic.ai"), api_key: str = Form(""), model: str = Form("acestep-v15-turbo"), audio_format: str = Form("mp3"), vocal_language: str = Form("en"), task_type: str = Form("cover"), cover_strength: float = Form(0.55)) -> dict:
     allowed_suffixes = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
     original_name = Path(audio.filename or "source_audio.mp3").name
     suffix = Path(original_name).suffix.lower() or ".mp3"
@@ -240,7 +250,7 @@ def generate_ace(request: AceGenerateRequest) -> dict:
 
 @app.post("/score")
 def score_version(request: ScoreRequest) -> dict:
-    score = VersionScore(artifact_path=request.artifact, version_label=request.version_label, emotion=request.emotion, yemeni_identity=request.yemeni_identity, vocal_beauty=request.vocal_beauty, lyrics=request.lyrics, instrumental=request.instrumental, replay_value=request.replay_value, notes=request.notes)
+    score = VersionScore(artifact_path=request.artifact, version_label=request.version_label, emotion=request.emotion, shareability=request.shareability, vocal_quality=request.vocal_quality, lyrics=request.lyrics, instrumental=request.instrumental, replay_value=request.replay_value, notes=request.notes)
     scorebook = append_score(score, request.scorebook)
     return {"score": score.to_record(), "best": scorebook.get("best")}
 

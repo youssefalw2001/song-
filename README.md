@@ -1,13 +1,16 @@
-# Arabic Song Conversion Lab
+# Viral Song Lab
 
-Prototype for transforming English song ideas into Arabic-inspired cover concepts, including Yemeni, Levantine, Gulf, Egyptian, Maghrebi, and cinematic Arabic styles.
+Platform for turning any idea -- a diss track on your friend, a birthday gift, a love
+confession, a breakup anthem, a hype/motivation banger, sad lo-fi feels, or a country story
+song -- into a catchy, shareable, real AI-generated song in English.
 
 ## Current build
 
 - GitHub Pages frontend app
 - Render-ready FastAPI backend
 - Direct text-to-audio API routes
-- Arabic and Yemeni style presets
+- English viral/occasion-first style presets (diss tracks, dancehall roasts, birthday
+  anthems, love confessions, breakup anthems, hype anthems, sad lo-fi, country story songs)
 - Lyric adaptation prompt builder
 - Music generation prompt builder
 - Vocal direction prompt builder
@@ -181,7 +184,7 @@ Do not put the API key in GitHub Pages or JavaScript. Put it only in Render envi
 After Render deploys, copy your Render service URL, for example:
 
 ```text
-https://arabic-song-conversion-api.onrender.com
+https://viral-song-lab-api.onrender.com
 ```
 
 Then open the GitHub Pages site and paste that into:
@@ -257,8 +260,8 @@ For a public GitHub Pages site, the backend should be deployed on an HTTPS host.
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style arabic_oud_ballad --output outputs/arabic-oud-package.json --source-label test_song_notes
-python -m song_lab.cli mock-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio
+python -m song_lab.cli from-text --text-file examples/hype-anthem-idea.txt --style hype_motivation_anthem --output outputs/hype-package.json --source-label test_song_notes
+python -m song_lab.cli mock-audio --package outputs/hype-package.json --output-dir outputs/audio
 ```
 
 Windows PowerShell:
@@ -267,14 +270,14 @@ Windows PowerShell:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style arabic_oud_ballad --output outputs/arabic-oud-package.json --source-label test_song_notes
-python -m song_lab.cli mock-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio
+python -m song_lab.cli from-text --text-file examples/hype-anthem-idea.txt --style hype_motivation_anthem --output outputs/hype-package.json --source-label test_song_notes
+python -m song_lab.cli mock-audio --package outputs/hype-package.json --output-dir outputs/audio
 ```
 
 ## Real audio with ACE-compatible engine from CLI
 
 ```bash
-python -m song_lab.cli ace-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio --base-url $ACESTEP_API_URL --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language ar
+python -m song_lab.cli ace-audio --package outputs/hype-package.json --output-dir outputs/audio --base-url $ACESTEP_API_URL --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language en
 ```
 
 If generation succeeds, the final audio file will be saved under `outputs/audio`.
@@ -282,11 +285,25 @@ If generation succeeds, the final audio file will be saved under `outputs/audio`
 ## Style examples
 
 ```bash
-python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style arabic_oud_ballad --output outputs/arabic-oud-package.json
-python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style levantine_pop_ballad --output outputs/levantine-package.json
-python -m song_lab.cli from-text --text-file examples/extracted-song-text.txt --style yemeni_oud_dream_pop --output outputs/yemeni-package.json
+python -m song_lab.cli from-text --text-file examples/diss-track-idea.txt --style diss_track_trap --output outputs/diss-package.json
+python -m song_lab.cli from-text --text-file examples/birthday-song-idea.txt --style birthday_banger_pop --output outputs/birthday-package.json
+python -m song_lab.cli from-text --text-file examples/hype-anthem-idea.txt --style hype_motivation_anthem --output outputs/hype-package.json
 ```
+
+## Available styles
+
+| Style key | Occasion |
+|---|---|
+| `diss_track_trap` | Savage, comedic diss track to roast a friend |
+| `dancehall_roast_anthem` | Playful dancehall-flavored roast/diss |
+| `birthday_banger_pop` | Upbeat birthday gift anthem |
+| `love_confession_rnb` | Sincere R&B love confession |
+| `breakup_anthem_pop` | Cathartic-to-triumphant breakup anthem |
+| `hype_motivation_anthem` | Chest-out hype/motivation banger |
+| `sad_lofi_feels` | Late-night melancholic lo-fi |
+| `country_story_love` | Warm, storytelling country song |
 
 ## MVP target
 
-One beautiful Arabic-style version first, then expand into more input types, hosted backend deployment, and direct audio playback/download in the browser.
+One certified-banger hype/diss-track version first, then expand into every occasion style,
+hosted backend deployment, and direct audio playback/download in the browser.

@@ -44,7 +44,7 @@ class StylePreset(BaseModel):
 
 
 class ConversionPackage(BaseModel):
-    source_text: str = Field(..., description="Original user-provided lyrics, summary, or vibe notes.")
+    source_text: str = Field(..., description="Original user-provided idea, occasion notes, or vibe description.")
     style: StylePreset
     analysis_prompt: str
     lyric_adaptation_prompt: str

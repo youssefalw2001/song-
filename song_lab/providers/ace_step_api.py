@@ -87,7 +87,7 @@ class AceStepApiProvider(SongProvider):
         backoff_max_seconds: float = 20.0,
         max_concurrent_requests: int | None = None,
         candidates: int = 1,
-        vocal_language: str = "ar",
+        vocal_language: str = "en",
         audio_format: str = "mp3",
         thinking: bool = True,
         use_format: bool = True,

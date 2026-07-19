@@ -35,6 +35,6 @@ class TestStylePresetBpmMidpoint:
 
 class TestConversionPackageBpmHint:
     def test_build_conversion_package_populates_bpm_hint_from_style(self):
-        package = build_conversion_package(source_text="test vibe notes", style_key="yemeni_oud_dream_pop")
-        assert package.bpm_hint == STYLE_PRESETS["yemeni_oud_dream_pop"].bpm_midpoint
+        package = build_conversion_package(source_text="test vibe notes", style_key="hype_motivation_anthem")
+        assert package.bpm_hint == STYLE_PRESETS["hype_motivation_anthem"].bpm_midpoint
         assert package.bpm_hint is not None

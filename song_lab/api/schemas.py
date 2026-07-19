@@ -7,13 +7,13 @@ from pydantic import BaseModel, Field
 
 class TextPackageRequest(BaseModel):
     text: str = Field(..., min_length=1)
-    style: str = "arabic_oud_ballad"
+    style: str = "hype_motivation_anthem"
     source_label: str = "api_text_input"
 
 
 class FilePackageRequest(BaseModel):
     text_file: Path
-    style: str = "arabic_oud_ballad"
+    style: str = "hype_motivation_anthem"
     source_label: str = "api_text_file"
     output_path: Path = Path("outputs/api-package.json")
 
@@ -30,7 +30,7 @@ class AceGenerateRequest(GenerateRequest):
     api_key: str | None = None
     model: str = "acestep-v15-turbo"
     audio_format: str = "mp3"
-    vocal_language: str = "ar"
+    vocal_language: str = "en"
     candidates: int = Field(default=1, ge=1, le=4, description="Number of takes to generate; the closest match to the requested duration is selected automatically.")
 
 
@@ -42,7 +42,7 @@ class TextAceGenerateRequest(TextPackageRequest):
     api_key: str | None = None
     model: str = "acestep-v15-turbo"
     audio_format: str = "mp3"
-    vocal_language: str = "ar"
+    vocal_language: str = "en"
     candidates: int = Field(default=1, ge=1, le=4, description="Number of takes to generate; the closest match to the requested duration is selected automatically.")
 
 
@@ -50,8 +50,8 @@ class ScoreRequest(BaseModel):
     artifact: str
     version_label: str
     emotion: int = Field(ge=1, le=10)
-    yemeni_identity: int = Field(ge=1, le=10)
-    vocal_beauty: int = Field(ge=1, le=10)
+    shareability: int = Field(ge=1, le=10)
+    vocal_quality: int = Field(ge=1, le=10)
     lyrics: int = Field(ge=1, le=10)
     instrumental: int = Field(ge=1, le=10)
     replay_value: int = Field(ge=1, le=10)

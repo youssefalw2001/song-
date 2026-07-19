@@ -101,8 +101,8 @@ class LoadTestReport:
 
 async def _run_mock_request(client: httpx.AsyncClient, index: int, output_dir: Path) -> RequestOutcome:
     payload = {
-        "text": f"Stress test song idea number {index}: love, distance, longing, hope.",
-        "style": "yemeni_oud_dream_pop",
+        "text": f"Stress test song idea number {index}: hype anthem, confident, chest-out energy.",
+        "style": "hype_motivation_anthem",
         "source_label": f"stress_test_{index}",
         "lyrics": "",
         "output_dir": str(output_dir),
@@ -153,11 +153,11 @@ def run_live_smoke_test(total_requests: int, output_dir: Path) -> LoadTestReport
     with AceStepApiProvider(base_url="https://api.acemusic.ai", max_retries=2, timeout_seconds=180, max_concurrent_requests=1) as provider:
         for index in range(capped_requests):
             job = SongJob(
-                prompt="Slow Yemeni oud dream-pop ballad, warm night mood, gentle qanbus and hand percussion, emotional but beautiful vocal.",
-                lyrics="[Verse 1]\nA quiet night, a distant light\n\n[Chorus]\nThe heart still waits, still knows your name",
+                prompt="Confident hype motivation anthem, massive 808 bass, chant-rap hybrid delivery, chest-out energy, built for pre-game hype.",
+                lyrics="[Verse 1]\nWoke up with a purpose, no time to hesitate\n\n[Hook]\nThis is my moment, I can feel it in my chest",
                 output_dir=output_dir,
                 duration_seconds=30,
-                bpm_hint=80,
+                bpm_hint=75,
             )
             request_started = time.perf_counter()
             try:
