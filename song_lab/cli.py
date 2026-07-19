@@ -9,14 +9,14 @@ from song_lab.audio.jobs import SongJob
 from song_lab.improve import improve_package
 from song_lab.pipeline import build_conversion_package
 from song_lab.presets import STYLE_PRESETS
-from song_lab.providers.ace_step_api import AceStepApiProvider
+from song_lab.providers.ace_step_api import AceStepApiError, AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
 from song_lab.scoring import VersionScore, append_score
 
 
 @click.group()
 def main() -> None:
-    """Yemeni Song Conversion Lab command line tools."""
+    """Viral Song Lab command line tools."""
 
 
 @main.command("package")
@@ -29,10 +29,10 @@ def main() -> None:
 )
 @click.option(
     "--style",
-    default="yemeni_oud_dream_pop",
+    default="hype_motivation_anthem",
     show_default=True,
     type=click.Choice(sorted(STYLE_PRESETS.keys())),
-    help="Target Yemeni-inspired style preset.",
+    help="Target viral song style preset.",
 )
 @click.option(
     "--output",
@@ -43,7 +43,7 @@ def main() -> None:
     help="Where to write the generated test package JSON.",
 )
 def package_command(input_path: str, style: str, output_path: str) -> None:
-    """Create a repeatable prompt package for Yemeni-style song conversion."""
+    """Create a repeatable prompt package for a viral song idea."""
     source_text = _read_text_input(input_path)
     package = build_conversion_package(source_text=source_text, style_key=style)
     _write_package(package.model_dump(), output_path)
@@ -60,10 +60,10 @@ def package_command(input_path: str, style: str, output_path: str) -> None:
 )
 @click.option(
     "--style",
-    default="yemeni_oud_dream_pop",
+    default="hype_motivation_anthem",
     show_default=True,
     type=click.Choice(sorted(STYLE_PRESETS.keys())),
-    help="Target Yemeni-inspired style preset.",
+    help="Target viral song style preset.",
 )
 @click.option(
     "--output",
@@ -80,7 +80,7 @@ def package_command(input_path: str, style: str, output_path: str) -> None:
     help="Label used in package metadata.",
 )
 def from_text_command(text_file: str, style: str, output_path: str, source_label: str) -> None:
-    """Build a Yemeni conversion package from existing text extracted from a song."""
+    """Build a viral song conversion package from an existing idea/vibe text file."""
     source_text = _read_text_input(text_file)
     enriched = (
         f"Source label: {source_label}\n\n"
@@ -138,7 +138,9 @@ def mock_audio_command(package_path: str, output_dir: str, duration: int) -> Non
 @click.option("--model", default="acestep-v15-turbo", show_default=True, help="ACE-Step model name.")
 @click.option("--duration", default=90, show_default=True, type=int, help="Target song duration in seconds.")
 @click.option("--format", "audio_format", default="mp3", show_default=True, help="Output audio format, e.g. mp3 or wav.")
-@click.option("--vocal-language", default="ar", show_default=True, help="Vocal language code for lyrics.")
+@click.option("--vocal-language", default="en", show_default=True, help="Vocal language code for lyrics.")
+@click.option("--bpm-hint", default=None, type=int, help="Optional target BPM. Defaults to the package's bpm_hint if present.")
+@click.option("--candidates", default=1, show_default=True, type=click.IntRange(1, 4), help="Generate N takes and keep the one closest to the requested duration.")
 def ace_audio_command(
     package_path: str,
     output_dir: str,
@@ -148,26 +150,32 @@ def ace_audio_command(
     duration: int,
     audio_format: str,
     vocal_language: str,
+    bpm_hint: int | None,
+    candidates: int,
 ) -> None:
     """Generate real audio using a running ACE-Step API server."""
     package_data = _read_package(package_path)
-    provider = AceStepApiProvider(
-        base_url=base_url,
-        api_key=api_key,
-        model=model,
-        audio_format=audio_format,
-        vocal_language=vocal_language,
-    )
-    result = provider.run(_job_from_package(package_data, output_dir, duration))
+    try:
+        with AceStepApiProvider(
+            base_url=base_url,
+            api_key=api_key,
+            model=model,
+            audio_format=audio_format,
+            vocal_language=vocal_language,
+            candidates=candidates,
+        ) as provider:
+            result = provider.run(_job_from_package(package_data, output_dir, duration, bpm_hint))
+    except AceStepApiError as exc:
+        raise click.ClickException(f"ACE-Step generation failed: {exc}") from exc
     click.echo(result.model_dump_json(indent=2))
 
 
 @main.command("score-version")
 @click.option("--artifact", required=True, help="Path or label for the generated version being scored.")
-@click.option("--version-label", required=True, help="Human-readable version name, e.g. v1-dream-oud.")
+@click.option("--version-label", required=True, help="Human-readable version name, e.g. v1-diss-track.")
 @click.option("--emotion", required=True, type=click.IntRange(1, 10))
-@click.option("--yemeni-identity", required=True, type=click.IntRange(1, 10))
-@click.option("--vocal-beauty", required=True, type=click.IntRange(1, 10))
+@click.option("--shareability", required=True, type=click.IntRange(1, 10))
+@click.option("--vocal-quality", required=True, type=click.IntRange(1, 10))
 @click.option("--lyrics", required=True, type=click.IntRange(1, 10))
 @click.option("--instrumental", required=True, type=click.IntRange(1, 10))
 @click.option("--replay-value", required=True, type=click.IntRange(1, 10))
@@ -177,8 +185,8 @@ def score_version_command(
     artifact: str,
     version_label: str,
     emotion: int,
-    yemeni_identity: int,
-    vocal_beauty: int,
+    shareability: int,
+    vocal_quality: int,
     lyrics: int,
     instrumental: int,
     replay_value: int,
@@ -190,8 +198,8 @@ def score_version_command(
         artifact_path=artifact,
         version_label=version_label,
         emotion=emotion,
-        yemeni_identity=yemeni_identity,
-        vocal_beauty=vocal_beauty,
+        shareability=shareability,
+        vocal_quality=vocal_quality,
         lyrics=lyrics,
         instrumental=instrumental,
         replay_value=replay_value,
@@ -233,18 +241,20 @@ def _read_package(package_path: str) -> dict:
     return json.loads(Path(package_path).read_text(encoding="utf-8"))
 
 
-def _job_from_package(package_data: dict, output_dir: str, duration: int) -> SongJob:
+def _job_from_package(package_data: dict, output_dir: str, duration: int, bpm_hint: int | None = None) -> SongJob:
     prompt = package_data.get("music_prompt", "").strip()
     lyrics = package_data.get("lyric_adaptation_prompt", "").strip()
 
     if not prompt:
         raise click.ClickException("Package is missing music_prompt.")
 
+    resolved_bpm_hint = bpm_hint if bpm_hint is not None else package_data.get("bpm_hint")
     return SongJob(
         prompt=prompt,
         lyrics=lyrics,
         output_dir=Path(output_dir),
         duration_seconds=duration,
+        bpm_hint=resolved_bpm_hint,
     )
 
 

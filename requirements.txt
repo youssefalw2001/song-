@@ -1,8 +1,10 @@
-click>=8.1.7
-pydantic>=2.8.2
-fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
-python-multipart>=0.0.9
+click==8.4.2
+pydantic==2.13.4
+fastapi==0.139.2
+uvicorn[standard]==0.51.0
+python-multipart==0.0.32
+httpx==0.28.1
+mutagen==1.48.1
 
 # Optional local audio backends. Install only when you are ready for GPU/audio work:
 # pip install faster-whisper demucs soundfile

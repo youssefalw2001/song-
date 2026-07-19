@@ -1,11 +1,11 @@
 {
-  "version": "0.1.0",
-  "project": "Yemeni Song Conversion Lab",
-  "quality_target": "one beautiful slow Yemeni oud dream-pop version before expanding",
+  "version": "0.2.0",
+  "project": "Viral Song Lab",
+  "quality_target": "one certified-banger hype/diss-track version before expanding to every occasion style",
   "minimum_good_score": {
     "emotion": 8,
-    "yemeni_identity": 7,
-    "vocal_beauty": 7,
+    "shareability": 8,
+    "vocal_quality": 7,
     "lyrics": 7,
     "instrumental": 7,
     "replay_value": 7

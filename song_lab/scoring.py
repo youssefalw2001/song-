@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field, model_validator
 
 SCORE_FIELDS = (
     "emotion",
-    "yemeni_identity",
-    "vocal_beauty",
+    "shareability",
+    "vocal_quality",
     "lyrics",
     "instrumental",
     "replay_value",
@@ -21,8 +21,8 @@ class VersionScore(BaseModel):
     version_label: str
     artifact_path: str
     emotion: int = Field(ge=1, le=10)
-    yemeni_identity: int = Field(ge=1, le=10)
-    vocal_beauty: int = Field(ge=1, le=10)
+    shareability: int = Field(ge=1, le=10)
+    vocal_quality: int = Field(ge=1, le=10)
     lyrics: int = Field(ge=1, le=10)
     instrumental: int = Field(ge=1, le=10)
     replay_value: int = Field(ge=1, le=10)
@@ -42,8 +42,8 @@ class VersionScore(BaseModel):
     def passed(self) -> bool:
         return (
             self.emotion >= 8
-            and self.yemeni_identity >= 7
-            and self.vocal_beauty >= 7
+            and self.shareability >= 8
+            and self.vocal_quality >= 7
             and self.lyrics >= 7
             and self.instrumental >= 7
             and self.replay_value >= 7
@@ -64,16 +64,16 @@ class VersionScore(BaseModel):
 
     def next_action(self) -> str:
         weak = set(self.weakest_fields())
-        if "yemeni_identity" in weak:
-            return "Strengthen Yemeni rhythm, instrument details, and dialect phrasing."
-        if "vocal_beauty" in weak:
-            return "Try a different voice preset, simpler lyrics, or cleaner vocal language settings."
+        if "shareability" in weak:
+            return "Sharpen the hook into something more quotable/screenshot-able; add a more specific, personal detail."
+        if "vocal_quality" in weak:
+            return "Try a different vocal direction, simpler lyrics, or a different style preset."
         if "lyrics" in weak:
-            return "Rewrite the chorus and simplify lines for singing."
+            return "Rewrite the chorus and add more specific, personal detail instead of generic lines."
         if "instrumental" in weak:
-            return "Adjust instrumentation and arrangement; reduce generic Arabic-pop elements."
+            return "Adjust instrumentation and arrangement to better match the requested style's identity."
         if "replay_value" in weak:
-            return "Improve the hook and chorus repetition."
+            return "Improve the hook and chorus repetition; get to the best line faster."
         return "Keep this version as a candidate and generate one close variation."
 
 

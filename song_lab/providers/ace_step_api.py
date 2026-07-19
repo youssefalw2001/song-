@@ -2,24 +2,74 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
+import random
 import time
-import urllib.error
-import urllib.request
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
-from song_lab.audio.jobs import SongJob, SongJobResult
+import httpx
+import mutagen
+
+from song_lab.audio.jobs import AudioCandidate, SongJob, SongJobResult
+from song_lab.observability import get_logger, log_with_context, safe_context
 from song_lab.providers.base import SongProvider
+from song_lab.rate_limit import ConcurrencyLimiter, RateLimitTimeoutError
+
+logger = get_logger(__name__)
+
+# Minimum plausible size for a real audio file. Anything smaller is treated
+# as a truncated/corrupt download rather than retried as valid output.
+MIN_VALID_AUDIO_BYTES = 2048
+
+# HTTP statuses worth retrying: rate limiting and transient server failures.
+# 4xx client errors other than 429 indicate a request problem that a retry
+# cannot fix (bad payload, auth failure, not found) and must not be retried.
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
 class AceStepApiError(RuntimeError):
-    """Raised when the ACE-Step API returns an invalid or failed response."""
+    """Base error for all ACE-Step API failures."""
+
+
+class AceStepAuthError(AceStepApiError):
+    """Raised on 401/403 -- invalid or missing API key. Never retried."""
+
+
+class AceStepClientError(AceStepApiError):
+    """Raised on non-retryable 4xx responses (bad request, not found, validation). Never retried."""
+
+
+class AceStepRateLimitedError(AceStepApiError):
+    """Raised on 429 after retries are exhausted."""
+
+
+class AceStepServerError(AceStepApiError):
+    """Raised on 5xx after retries are exhausted."""
+
+
+class AceStepTimeoutError(AceStepApiError):
+    """Raised when a request or the overall job deadline is exceeded."""
+
+
+class AceStepInvalidResponseError(AceStepApiError):
+    """Raised when the API returns 200 but the payload/audio is missing, malformed, or corrupt."""
 
 
 class AceStepApiProvider(SongProvider):
-    """Provider for ACE-Step local/native API and AceMusic cloud completion API."""
+    """Provider for ACE-Step local/native API and AceMusic cloud completion API.
+
+    Hardened for production use against a free, unauthenticated-by-default
+    demo service (acemusic.ai) that publishes no SLA: every network call has
+    explicit timeouts, transient failures retry with exponential backoff and
+    jitter up to a hard ceiling, concurrent in-flight requests are capped by
+    a shared limiter, and every downloaded audio file is validated before
+    being reported as a successful generation. Supports best-of-N candidate
+    generation to pick the strongest take out of a batch.
+    """
 
     name = "ace_step_api"
 
@@ -30,17 +80,30 @@ class AceStepApiProvider(SongProvider):
         model: str | None = None,
         poll_seconds: float = 2.0,
         timeout_seconds: int = 900,
-        vocal_language: str = "ar",
+        connect_timeout_seconds: float = 5.0,
+        request_timeout_seconds: float = 120.0,
+        max_retries: int = 3,
+        backoff_base_seconds: float = 1.0,
+        backoff_max_seconds: float = 20.0,
+        max_concurrent_requests: int | None = None,
+        candidates: int = 1,
+        vocal_language: str = "en",
         audio_format: str = "mp3",
         thinking: bool = True,
         use_format: bool = True,
         api_mode: str | None = None,
+        concurrency_limiter: ConcurrencyLimiter | None = None,
+        transport: httpx.BaseTransport | None = None,
     ) -> None:
         self.base_url = (base_url or os.getenv("ACESTEP_API_URL") or "http://127.0.0.1:8001").rstrip("/")
         self.api_key = api_key or os.getenv("ACESTEP_API_KEY") or os.getenv("ACEMUSIC_API_KEY")
         self.model = model or os.getenv("ACESTEP_MODEL") or "acestep-v15-turbo"
         self.poll_seconds = poll_seconds
         self.timeout_seconds = timeout_seconds
+        self.max_retries = max(0, max_retries)
+        self.backoff_base_seconds = backoff_base_seconds
+        self.backoff_max_seconds = backoff_max_seconds
+        self.candidates = max(1, candidates)
         self.vocal_language = vocal_language
         self.audio_format = audio_format
         self.thinking = thinking
@@ -48,10 +111,31 @@ class AceStepApiProvider(SongProvider):
         configured_mode = api_mode or os.getenv("ACESTEP_API_MODE") or os.getenv("ACEMUSIC_API_MODE")
         if configured_mode:
             self.api_mode = configured_mode.strip().lower()
-        elif "api.acemusic.ai" in self.base_url:
+        elif "api.acemusic.ai" in self.base_url or "acemusic.ai" in self.base_url:
             self.api_mode = "completion"
         else:
             self.api_mode = "native"
+
+        resolved_max_concurrent = max_concurrent_requests or int(os.getenv("ACESTEP_MAX_CONCURRENT", "2"))
+        self._limiter = concurrency_limiter or ConcurrencyLimiter(
+            max_concurrent=resolved_max_concurrent,
+            wait_timeout_seconds=float(self.timeout_seconds),
+        )
+        self._owns_limiter = concurrency_limiter is None
+
+        self._client = httpx.Client(
+            timeout=httpx.Timeout(
+                connect=connect_timeout_seconds,
+                read=request_timeout_seconds,
+                write=connect_timeout_seconds,
+                pool=connect_timeout_seconds,
+            ),
+            limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
+            transport=transport,
+        )
+
+    def close(self) -> None:
+        self._client.close()
 
     def run(self, job: SongJob) -> SongJobResult:
         return self._run_and_wrap(job, source_audio_path=None, task_type="text2music", cover_strength=None)
@@ -77,54 +161,61 @@ class AceStepApiProvider(SongProvider):
 
         try:
             if self.api_mode == "completion":
-                downloaded_path, response = self.run_completion(
+                candidates, response = self.run_completion(
                     job,
                     source_audio_path=source_audio_path,
                     task_type=task_type,
                     cover_strength=cover_strength,
                 )
+                best = _select_best_candidate(candidates)
                 metadata = {
                     "provider": self.name,
                     "api_mode": self.api_mode,
                     "task_type": task_type,
                     "source_audio_path": str(source_audio_path) if source_audio_path else None,
                     "response_id": response.get("id"),
-                    "response": self._without_audio_blob(response),
-                    "downloaded_path": str(downloaded_path),
+                    "response": safe_context(response),
+                    "downloaded_path": str(best.path),
+                    "candidate_count": len(candidates),
                 }
                 metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
                 return SongJobResult(
                     provider=self.name,
                     status="generated",
-                    output_path=downloaded_path,
+                    output_path=best.path,
                     metadata_path=metadata_path,
-                    message="ACE-Step completion API generated audio successfully.",
+                    message=f"ACE-Step completion API generated {len(candidates)} candidate(s); selected best match.",
+                    candidates=candidates,
                 )
 
             if source_audio_path:
                 raise AceStepApiError("Audio upload mode currently requires AceMusic completion API mode.")
 
             task_id = self.release_task(job)
-            task_result = self.wait_for_task(task_id)
-            downloaded_path = self.download_first_audio(task_result, job.output_dir, task_id)
+            task_results = self.wait_for_task(task_id)
+            candidates = self.download_all_audio(task_results, job, task_id)
+            best = _select_best_candidate(candidates)
             metadata = {
                 "provider": self.name,
                 "api_mode": self.api_mode,
                 "task_id": task_id,
-                "result": task_result,
-                "downloaded_path": str(downloaded_path),
+                "result_count": len(task_results),
+                "downloaded_path": str(best.path),
+                "candidate_count": len(candidates),
             }
             metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
             return SongJobResult(
                 provider=self.name,
                 status="generated",
-                output_path=downloaded_path,
+                output_path=best.path,
                 metadata_path=metadata_path,
-                message="ACE-Step native API generated audio successfully.",
+                message=f"ACE-Step native API generated {len(candidates)} candidate(s); selected best match.",
+                candidates=candidates,
             )
-        except Exception as exc:
+        except AceStepApiError as exc:
+            log_with_context(logger, logging.ERROR, "ACE-Step generation failed", job_prompt_length=len(job.prompt), error_type=type(exc).__name__, error=str(exc))
             metadata_path.write_text(
-                json.dumps({"provider": self.name, "api_mode": self.api_mode, "error": str(exc)}, ensure_ascii=False, indent=2),
+                json.dumps({"provider": self.name, "api_mode": self.api_mode, "error_type": type(exc).__name__, "error": str(exc)}, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
             return SongJobResult(
@@ -132,7 +223,7 @@ class AceStepApiProvider(SongProvider):
                 status="failed",
                 output_path=metadata_path,
                 metadata_path=metadata_path,
-                message=f"ACE-Step generation failed: {exc}",
+                message=f"ACE-Step generation failed ({type(exc).__name__}): {exc}",
             )
 
     def health(self) -> dict[str, Any]:
@@ -144,7 +235,7 @@ class AceStepApiProvider(SongProvider):
         source_audio_path: Path | None = None,
         task_type: str = "text2music",
         cover_strength: float | None = None,
-    ) -> tuple[Path, dict[str, Any]]:
+    ) -> tuple[list[AudioCandidate], dict[str, Any]]:
         model = self._completion_model_id(self.model)
         content = f"<prompt>{job.prompt}</prompt>"
         if job.lyrics:
@@ -165,6 +256,14 @@ class AceStepApiProvider(SongProvider):
         else:
             messages = [{"role": "user", "content": content}]
 
+        audio_config: dict[str, Any] = {
+            "format": self.audio_format,
+            "vocal_language": self.vocal_language,
+            "duration": job.duration_seconds,
+        }
+        if job.bpm_hint is not None:
+            audio_config["bpm"] = job.bpm_hint
+
         payload: dict[str, Any] = {
             "model": model,
             "messages": messages,
@@ -174,11 +273,8 @@ class AceStepApiProvider(SongProvider):
             "sample_mode": False,
             "use_cot_caption": True,
             "use_cot_language": True,
-            "audio_config": {
-                "format": self.audio_format,
-                "vocal_language": self.vocal_language,
-                "duration": job.duration_seconds,
-            },
+            "batch_size": self.candidates,
+            "audio_config": audio_config,
         }
         if source_audio_path:
             payload["task_type"] = task_type or "cover"
@@ -187,25 +283,33 @@ class AceStepApiProvider(SongProvider):
         if job.seed is not None:
             payload["seed"] = job.seed
 
-        response = self._request_json("POST", "/v1/chat/completions", payload, timeout=700)
+        with self._acquire_slot():
+            response = self._request_json("POST", "/v1/chat/completions", payload, timeout=700)
+
         choice = (response.get("choices") or [{}])[0]
         if choice.get("finish_reason") == "error":
             message = (choice.get("message") or {}).get("content") or response
-            raise AceStepApiError(f"AceMusic completion API error: {message}")
+            raise AceStepInvalidResponseError(f"AceMusic completion API returned an error result: {safe_context(message)}")
 
         audio_items = ((choice.get("message") or {}).get("audio") or [])
         if not audio_items:
-            raise AceStepApiError(f"Completion response contained no audio: {self._without_audio_blob(response)}")
-
-        audio_url = (((audio_items[0] or {}).get("audio_url") or {}).get("url") or "")
-        if not audio_url:
-            raise AceStepApiError(f"Completion audio item missing audio_url: {self._without_audio_blob(response)}")
+            raise AceStepInvalidResponseError(f"Completion response contained no audio: {safe_context(response)}")
 
         suffix = self.audio_format.lstrip(".") or "mp3"
-        safe_id = str(response.get("id") or self._timestamp()).replace("/", "-")
-        output_path = job.output_dir / f"ace-step-{safe_id}.{suffix}"
-        self._save_audio_data_url(audio_url, output_path)
-        return output_path, response
+        response_id = str(response.get("id") or self._timestamp()).replace("/", "-")
+        candidates: list[AudioCandidate] = []
+        for index, item in enumerate(audio_items):
+            audio_url = (((item or {}).get("audio_url") or {}).get("url") or "")
+            if not audio_url:
+                log_with_context(logger, logging.WARNING, "Skipping candidate with no audio_url", candidate_index=index)
+                continue
+            output_path = job.output_dir / f"ace-step-{response_id}-{index}.{suffix}"
+            self._save_audio_data_url(audio_url, output_path)
+            candidates.append(self._validate_and_build_candidate(output_path, index, job.duration_seconds))
+
+        if not candidates:
+            raise AceStepInvalidResponseError("All candidates in completion response were missing audio_url.")
+        return candidates, response
 
     def release_task(self, job: SongJob) -> str:
         payload: dict[str, Any] = {
@@ -217,71 +321,180 @@ class AceStepApiProvider(SongProvider):
             "thinking": self.thinking,
             "use_format": self.use_format,
             "model": self.model,
-            "batch_size": 1,
+            "batch_size": self.candidates,
         }
+        if job.bpm_hint is not None:
+            payload["bpm"] = job.bpm_hint
         if job.seed is not None:
             payload["use_random_seed"] = False
             payload["seed"] = job.seed
-        response = self._request_json("POST", "/release_task", payload)
+        with self._acquire_slot():
+            response = self._request_json("POST", "/release_task", payload)
         data = self._unwrap(response)
         task_id = data.get("task_id")
         if not task_id:
-            raise AceStepApiError(f"ACE-Step did not return task_id: {response}")
+            raise AceStepInvalidResponseError(f"ACE-Step did not return task_id: {safe_context(response)}")
         return str(task_id)
 
-    def wait_for_task(self, task_id: str) -> dict[str, Any]:
+    def wait_for_task(self, task_id: str) -> list[dict[str, Any]]:
         deadline = time.monotonic() + self.timeout_seconds
         while time.monotonic() < deadline:
             response = self._request_json("POST", "/query_result", {"task_id_list": [task_id]})
             data = self._unwrap(response)
             if not isinstance(data, list) or not data:
-                raise AceStepApiError(f"Invalid query_result response: {response}")
+                raise AceStepInvalidResponseError(f"Invalid query_result response: {safe_context(response)}")
             item = data[0]
             status = int(item.get("status", 0))
             if status == 1:
                 parsed = self._parse_result_json(item.get("result"))
                 if not parsed:
-                    raise AceStepApiError(f"Task succeeded but returned no result: {item}")
-                return parsed[0]
+                    raise AceStepInvalidResponseError(f"Task succeeded but returned no result: {safe_context(item)}")
+                return parsed
             if status == 2:
-                raise AceStepApiError(f"ACE-Step task failed: {item}")
+                raise AceStepInvalidResponseError(f"ACE-Step task failed: {safe_context(item)}")
             time.sleep(self.poll_seconds)
-        raise TimeoutError(f"ACE-Step task timed out after {self.timeout_seconds} seconds: {task_id}")
+        raise AceStepTimeoutError(f"ACE-Step task timed out after {self.timeout_seconds} seconds: {task_id}")
+
+    def download_all_audio(self, results: list[dict[str, Any]], job: SongJob, task_id: str) -> list[AudioCandidate]:
+        suffix = self.audio_format.lstrip(".") or "mp3"
+        candidates: list[AudioCandidate] = []
+        for index, result in enumerate(results):
+            file_url = result.get("file")
+            if not file_url:
+                log_with_context(logger, logging.WARNING, "Skipping native result with no file URL", candidate_index=index)
+                continue
+            url = file_url if file_url.startswith(("http://", "https://")) else f"{self.base_url}{file_url}"
+            output_path = job.output_dir / f"ace-step-{task_id}-{index}.{suffix}"
+            self._download_file(url, output_path)
+            candidates.append(self._validate_and_build_candidate(output_path, index, job.duration_seconds))
+        if not candidates:
+            raise AceStepInvalidResponseError("No downloadable audio files were present in the native task result.")
+        return candidates
 
     def download_first_audio(self, result: dict[str, Any], output_dir: Path, task_id: str) -> Path:
+        """Retained for backward compatibility with callers expecting a single-file download."""
         file_url = result.get("file")
         if not file_url:
-            raise AceStepApiError(f"Result missing audio file URL: {result}")
+            raise AceStepInvalidResponseError(f"Result missing audio file URL: {safe_context(result)}")
         url = file_url if file_url.startswith(("http://", "https://")) else f"{self.base_url}{file_url}"
         suffix = self.audio_format.lstrip(".") or "mp3"
         output_path = output_dir / f"ace-step-{task_id}.{suffix}"
-        request = urllib.request.Request(url, headers=self._headers(include_json=False))
-        with urllib.request.urlopen(request, timeout=120) as response:
-            output_path.write_bytes(response.read())
+        self._download_file(url, output_path)
         return output_path
+
+    def _download_file(self, url: str, output_path: Path) -> None:
+        with self._client.stream("GET", url, headers=self._headers(include_json=False)) as response:
+            response.raise_for_status()
+            with output_path.open("wb") as handle:
+                for chunk in response.iter_bytes():
+                    handle.write(chunk)
+
+    def _validate_and_build_candidate(self, path: Path, index: int, requested_duration_seconds: int) -> AudioCandidate:
+        """Open the downloaded file with mutagen and raise if it isn't a real, decodable audio file.
+
+        A corrupt or truncated download is a silent-failure risk: without
+        this check, a broken file would be reported as a successful
+        generation and only discovered when a paying user hits play.
+        """
+        file_size = path.stat().st_size if path.exists() else 0
+        if file_size < MIN_VALID_AUDIO_BYTES:
+            raise AceStepInvalidResponseError(
+                f"Downloaded audio candidate {index} at {path} is only {file_size} bytes -- treating as a truncated/corrupt download."
+            )
+        try:
+            parsed = mutagen.File(path)
+        except Exception as exc:
+            raise AceStepInvalidResponseError(f"Candidate {index} at {path} could not be parsed as audio: {exc}") from exc
+        if parsed is None:
+            raise AceStepInvalidResponseError(f"Candidate {index} at {path} was not recognized as a valid audio file by mutagen.")
+
+        duration_seconds = float(getattr(parsed.info, "length", 0.0) or 0.0)
+        if duration_seconds <= 0.0:
+            log_with_context(logger, logging.WARNING, "Candidate has no reliable duration metadata", candidate_index=index, path=str(path))
+            score = float("inf")
+        else:
+            score = abs(duration_seconds - float(requested_duration_seconds))
+
+        return AudioCandidate(
+            path=path,
+            duration_seconds=duration_seconds,
+            file_size_bytes=file_size,
+            source_index=index,
+            score=score,
+        )
+
+    @contextmanager
+    def _acquire_slot(self) -> Iterator[None]:
+        try:
+            with self._limiter.acquire():
+                yield
+        except RateLimitTimeoutError as exc:
+            raise AceStepTimeoutError(str(exc)) from exc
 
     def _request_json(
         self,
         method: str,
         path: str,
         payload: dict[str, Any] | None = None,
-        timeout: int = 120,
+        timeout: int | None = None,
     ) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
-        body = json.dumps(payload).encode("utf-8") if payload is not None else None
-        request = urllib.request.Request(url, data=body, headers=self._headers(include_json=True), method=method)
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                response = self._client.request(
+                    method,
+                    url,
+                    json=payload,
+                    headers=self._headers(include_json=True),
+                    timeout=httpx.Timeout(connect=5.0, read=float(timeout) if timeout else None, write=10.0, pool=5.0) if timeout else None,
+                )
+            except httpx.TimeoutException as exc:
+                if attempt > self.max_retries:
+                    raise AceStepTimeoutError(f"Request to {url} timed out after {attempt} attempt(s): {exc}") from exc
+                self._sleep_backoff(attempt, reason="timeout")
+                continue
+            except httpx.TransportError as exc:
+                if attempt > self.max_retries:
+                    raise AceStepApiError(f"Could not reach ACE-Step API at {url} after {attempt} attempt(s): {exc}") from exc
+                self._sleep_backoff(attempt, reason="transport_error")
+                continue
+
+            if response.status_code == 401 or response.status_code == 403:
+                raise AceStepAuthError(f"Authentication failed for {url}: HTTP {response.status_code}: {self._safe_body(response)}")
+
+            if response.status_code in _RETRYABLE_STATUS_CODES:
+                if attempt > self.max_retries:
+                    error_cls = AceStepRateLimitedError if response.status_code == 429 else AceStepServerError
+                    raise error_cls(f"Request to {url} failed after {attempt} attempt(s): HTTP {response.status_code}: {self._safe_body(response)}")
+                self._sleep_backoff(attempt, reason=f"http_{response.status_code}")
+                continue
+
+            if response.status_code >= 400:
+                raise AceStepClientError(f"Request to {url} rejected: HTTP {response.status_code}: {self._safe_body(response)}")
+
+            try:
+                return response.json()
+            except ValueError as exc:
+                raise AceStepInvalidResponseError(f"Response from {url} was not valid JSON: {exc}") from exc
+
+    def _sleep_backoff(self, attempt: int, reason: str) -> None:
+        delay = min(self.backoff_max_seconds, self.backoff_base_seconds * (2 ** (attempt - 1)))
+        jitter = random.uniform(0, delay * 0.25)
+        sleep_for = delay + jitter
+        log_with_context(logger, logging.WARNING, "Retrying ACE-Step request after transient failure", attempt=attempt, reason=reason, sleep_seconds=round(sleep_for, 2))
+        time.sleep(sleep_for)
+
+    @staticmethod
+    def _safe_body(response: httpx.Response) -> str:
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                raw = response.read().decode("utf-8")
-                return json.loads(raw)
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise AceStepApiError(f"API request failed at {url}: HTTP {exc.code}: {detail}") from exc
-        except urllib.error.URLError as exc:
-            raise AceStepApiError(f"Could not reach ACE-Step API at {url}: {exc}") from exc
+            return safe_context(response.text)[:500]
+        except Exception:
+            return "<unreadable response body>"
 
     def _headers(self, include_json: bool) -> dict[str, str]:
-        headers: dict[str, str] = {"User-Agent": "curl/8.7.1"}
+        headers: dict[str, str] = {"User-Agent": "song-lab-ace-step-provider/2.0"}
         if include_json:
             headers["Content-Type"] = "application/json; charset=utf-8"
         if self.api_key:
@@ -294,9 +507,7 @@ class AceStepApiProvider(SongProvider):
             output_path.write_bytes(base64.b64decode(encoded))
             return
         if data_url.startswith(("http://", "https://")):
-            request = urllib.request.Request(data_url, headers=self._headers(include_json=False))
-            with urllib.request.urlopen(request, timeout=120) as response:
-                output_path.write_bytes(response.read())
+            self._download_file(data_url, output_path)
             return
         output_path.write_bytes(base64.b64decode(data_url))
 
@@ -305,19 +516,9 @@ class AceStepApiProvider(SongProvider):
         return model if "/" in model else f"acemusic/{model}"
 
     @staticmethod
-    def _without_audio_blob(response: dict[str, Any]) -> dict[str, Any]:
-        cleaned = json.loads(json.dumps(response))
-        for choice in cleaned.get("choices", []):
-            for audio in ((choice.get("message") or {}).get("audio") or []):
-                audio_url = audio.get("audio_url") or {}
-                if "url" in audio_url:
-                    audio_url["url"] = "<base64-audio-removed>"
-        return cleaned
-
-    @staticmethod
     def _unwrap(response: dict[str, Any]) -> Any:
         if response.get("code") != 200:
-            raise AceStepApiError(f"ACE-Step API error: {response}")
+            raise AceStepInvalidResponseError(f"ACE-Step API error: {safe_context(response)}")
         return response.get("data")
 
     @staticmethod
@@ -328,7 +529,7 @@ class AceStepApiProvider(SongProvider):
             parsed = json.loads(raw_result)
             if isinstance(parsed, list):
                 return parsed
-        raise AceStepApiError(f"Cannot parse ACE-Step result JSON: {raw_result}")
+        raise AceStepInvalidResponseError(f"Cannot parse ACE-Step result JSON: {safe_context(raw_result)}")
 
     @staticmethod
     def _timestamp() -> str:
@@ -337,3 +538,17 @@ class AceStepApiProvider(SongProvider):
     @staticmethod
     def _metadata_name() -> str:
         return f"ace-step-run-{AceStepApiProvider._timestamp()}.json"
+
+
+def _select_best_candidate(candidates: list[AudioCandidate]) -> AudioCandidate:
+    """Pick the candidate whose duration is closest to the requested length.
+
+    Mutates the winning candidate's `is_best` flag in place so callers that
+    inspect `SongJobResult.candidates` can see which one was chosen without
+    re-running the comparison.
+    """
+    if not candidates:
+        raise AceStepInvalidResponseError("Cannot select a best candidate from an empty candidate list.")
+    best = min(candidates, key=lambda candidate: candidate.score)
+    best.is_best = True
+    return best

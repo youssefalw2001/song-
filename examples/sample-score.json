@@ -1,11 +1,11 @@
 {
-  "version_label": "v1-dream-oud",
+  "version_label": "v1-diss-track",
   "artifact_path": "outputs/audio/ace-step-example.mp3",
   "emotion": 8,
-  "yemeni_identity": 6,
-  "vocal_beauty": 7,
+  "shareability": 6,
+  "vocal_quality": 7,
   "lyrics": 7,
   "instrumental": 7,
   "replay_value": 7,
-  "notes": "Strong mood, but Yemeni identity needs more specific rhythm and phrasing."
+  "notes": "Strong energy, but the hook needs a more specific, quotable line to boost shareability."
 }

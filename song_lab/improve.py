@@ -7,11 +7,11 @@ from typing import Any
 
 
 FIELD_INSTRUCTIONS = {
-    "emotion": "Make the performance more emotionally intense: slower phrasing, more longing, warmer reverb, and stronger rise into the chorus.",
-    "yemeni_identity": "Make the result more specifically Yemeni: emphasize qanbus or oud phrases, hand percussion, call-and-response, and natural Yemeni poetic phrasing.",
-    "vocal_beauty": "Improve vocal beauty: use a smoother emotional Arabic voice, clearer pronunciation, fewer rushed syllables, and more tasteful held notes.",
-    "lyrics": "Improve lyrics: simplify the lines, make the chorus more memorable, avoid literal translation, and use natural Arabic/Yemeni poetic images.",
-    "instrumental": "Improve the instrumental: reduce generic Arabic-pop elements, add warmer oud/qanbus details, keep percussion soft, and leave space for vocal lines.",
+    "emotion": "Make the performance more emotionally intense: match the delivery to the occasion (bigger hype, deeper sincerity, sharper comedic timing), and build more clearly into the chorus.",
+    "shareability": "Make the hook more quotable and screenshot-able: sharpen the funniest/most emotional line, add a more specific personal detail (name, inside joke, real event), and get to it faster.",
+    "vocal_quality": "Improve vocal quality: use clearer diction so punchlines/hooks are never mumbled, fewer rushed syllables, and more tasteful delivery for the requested style.",
+    "lyrics": "Improve lyrics: simplify the lines, make the chorus more memorable, cut generic filler, and add vivid, specific, personal images.",
+    "instrumental": "Improve the instrumental: strengthen the identity of the requested style (the right drums, bass, and lead instrument for that genre), keep percussion clean, and leave space for vocal lines.",
     "replay_value": "Improve replay value: strengthen the hook, repeat the best chorus line, and make the arrangement build more clearly.",
 }
 
@@ -52,7 +52,7 @@ def improve_package(package_path: str | Path, scorebook_path: str | Path, output
 
 
 def _weakest_fields_from_score(score: dict[str, Any]) -> list[str]:
-    fields = ["emotion", "yemeni_identity", "vocal_beauty", "lyrics", "instrumental", "replay_value"]
+    fields = ["emotion", "shareability", "vocal_quality", "lyrics", "instrumental", "replay_value"]
     values = {field: int(score.get(field, 10)) for field in fields}
     lowest = min(values.values())
     return [field for field, value in values.items() if value == lowest]

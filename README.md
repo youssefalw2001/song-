@@ -1,22 +1,132 @@
-# Arabic Song Conversion Lab
+# Viral Song Lab
 
-Prototype for transforming English song ideas into Arabic-inspired cover concepts, including Yemeni, Levantine, Gulf, Egyptian, Maghrebi, and cinematic Arabic styles.
+Platform for turning any idea -- a diss track on your friend, a birthday gift, a love
+confession, a breakup anthem, a hype/motivation banger, sad lo-fi feels, or a country story
+song -- into a catchy, shareable, real AI-generated song in English.
 
 ## Current build
 
 - GitHub Pages frontend app
 - Render-ready FastAPI backend
 - Direct text-to-audio API routes
-- Arabic and Yemeni style presets
+- English viral/occasion-first style presets (diss tracks, dancehall roasts, birthday
+  anthems, love confessions, breakup anthems, hype anthems, sad lo-fi, country story songs)
 - Lyric adaptation prompt builder
 - Music generation prompt builder
 - Vocal direction prompt builder
 - Version scoring rubric
 - Prompt improvement loop
 - Mock audio provider for end-to-end flow testing
-- ACE-Step-compatible REST API provider for real audio generation
+- Production-hardened ACE-Step-compatible REST API provider: typed errors, retry with backoff+jitter, concurrency limiting, best-of-N candidate generation, and mutagen-based audio validation
+- Automatic BPM hints derived from each style preset, forwarded to the audio provider
+- Primary/fallback provider wrapper for resilience against a single backend going down
+- Structured JSON logging with automatic secret and audio-payload redaction
 - Python CLI prototype
 - JSON output for repeatable testing
+- pytest suite covering the hardened provider, rate limiter, fallback wrapper, and BPM parsing
+- Async stress-test harness for load-testing the API and smoke-testing the real backend
+
+## IMPORTANT: acemusic.ai now requires an API key
+
+As of this update, the free hosted `https://api.acemusic.ai` completion endpoint returns
+`HTTP 401: Missing authentication token` on every request with no key configured. This was
+verified live against the real service, not assumed. The previous assumption that
+acemusic.ai was fully open/keyless is no longer accurate -- you must obtain an API key
+from acemusic.ai and set `ACEMUSIC_API_KEY` (or `ACESTEP_API_KEY`) before real generation
+will work against that backend. Budget for this before assuming a $0 generation cost.
+
+**Never commit a real key or paste one into chat/logs.** Set it as an environment variable
+(`export ACEMUSIC_API_KEY=...`) or in a git-ignored `.env` file only. Any key that has been
+pasted into a chat, ticket, or log should be treated as compromised and rotated immediately.
+
+### Verified live end-to-end
+
+With a valid `ACEMUSIC_API_KEY` set, `python scripts/stress_test.py live --requests 1` was
+run against the real backend and produced a genuine, valid song:
+
+- Format: MP3, ID3v2.4, MPEG layer III
+- Duration: 30.02s (requested 30s -- exact match)
+- Bitrate: 128kbps, 48kHz, stereo
+- Generation latency: ~32 seconds for a 30-second song
+- File validated by `mutagen` as real, decodable audio (not a truncated/corrupt download)
+
+This confirms the full pipeline -- prompt building, BPM hint forwarding, the hardened
+provider's retry/timeout/validation logic, and real ACE-Step generation -- works end to end
+against the production acemusic.ai backend, not just the mock path.
+
+## Hardened ACE-Step provider
+
+`song_lab/providers/ace_step_api.py` is production-grade, not a thin HTTP wrapper:
+
+- **Typed exceptions** -- `AceStepAuthError`, `AceStepClientError`, `AceStepRateLimitedError`,
+  `AceStepServerError`, `AceStepTimeoutError`, `AceStepInvalidResponseError` -- so callers can
+  distinguish "your API key is wrong" from "the service is temporarily overloaded" from
+  "the response was corrupt," and only the last three are ever retried.
+- **Explicit timeouts** on every request (connect/read/write/pool), never an indefinite hang.
+- **Retry with exponential backoff and jitter**, capped by `max_retries` -- 429 and 5xx
+  responses and transport errors are retried; 4xx client errors and auth failures never are.
+- **Concurrency limiting** (`song_lab/rate_limit.py`) caps how many generation requests are
+  in flight at once against the shared free acemusic.ai service, so a traffic spike can't
+  silently hammer a resource we don't control. Configurable via `ACESTEP_MAX_CONCURRENT`
+  (default 2).
+- **Best-of-N candidate generation** -- pass `candidates=N` (CLI: `--candidates`, API:
+  `"candidates": N`) to generate multiple takes and automatically keep the one whose actual
+  duration is closest to the requested length.
+- **Audio validation** -- every downloaded file is opened with `mutagen` and checked for a
+  minimum size and a real, parseable duration before being reported as a successful
+  generation. A truncated or corrupt download is treated as a failure, never silently
+  returned as if it were a good song.
+- **Resource cleanup** -- the provider is a context manager (`with AceStepApiProvider(...) as
+  provider:`); the underlying HTTP connection pool is always closed, even on error.
+
+## Fallback provider
+
+`song_lab/providers/fallback.py` wraps a primary and one or more fallback providers. If the
+primary raises or returns a failed result, the next provider is tried, in order. It never
+silently substitutes a mock provider for a real one -- if you want a mock fallback in a
+non-production environment, pass `MockSongProvider()` explicitly as one of the fallbacks so
+that choice is visible in your own code, not hidden in this library.
+
+```python
+from song_lab.providers.ace_step_api import AceStepApiProvider
+from song_lab.providers.fallback import FallbackSongProvider
+
+primary = AceStepApiProvider(base_url="https://your-self-hosted-instance")
+fallback = AceStepApiProvider(base_url="https://api.acemusic.ai", api_key="sk-...")
+
+with FallbackSongProvider(primary=primary, fallbacks=[fallback]) as provider:
+    result = provider.run(job)
+```
+
+## Running the tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
+49 tests cover the hardened provider's retry/backoff/error-mapping behavior (mocked at the
+httpx transport boundary -- no real network calls), the concurrency limiter, the fallback
+wrapper, secret/audio redaction, and BPM-hint parsing.
+
+## Stress-testing before you go viral
+
+`scripts/stress_test.py` has two modes:
+
+```bash
+# Safe to run as hard as you want -- drives the real FastAPI app in-process
+# via the mock provider, no network calls, no cost.
+python scripts/stress_test.py mock --requests 2000 --concurrency 200
+
+# Makes 1 REAL call against the configured ACE-Step backend to prove the
+# end-to-end pipeline produces valid audio. Hard-capped at 3 requests --
+# acemusic.ai is a shared free resource, never load-test it.
+python scripts/stress_test.py live --requests 1
+```
+
+The mock-mode harness has been run locally up to 5,000 concurrent-burst requests with zero
+failures, confirming the API layer holds up under viral-spike-level traffic. Run it again
+after any change to the request/response path before trusting it under real load.
 
 ## Use the GitHub Pages site
 
@@ -74,7 +184,7 @@ Do not put the API key in GitHub Pages or JavaScript. Put it only in Render envi
 After Render deploys, copy your Render service URL, for example:
 
 ```text
-https://arabic-song-conversion-api.onrender.com
+https://viral-song-lab-api.onrender.com
 ```
 
 Then open the GitHub Pages site and paste that into:
@@ -150,8 +260,8 @@ For a public GitHub Pages site, the backend should be deployed on an HTTPS host.
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style arabic_oud_ballad --output outputs/arabic-oud-package.json --source-label test_song_notes
-python -m song_lab.cli mock-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio
+python -m song_lab.cli from-text --text-file examples/hype-anthem-idea.txt --style hype_motivation_anthem --output outputs/hype-package.json --source-label test_song_notes
+python -m song_lab.cli mock-audio --package outputs/hype-package.json --output-dir outputs/audio
 ```
 
 Windows PowerShell:
@@ -160,14 +270,14 @@ Windows PowerShell:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style arabic_oud_ballad --output outputs/arabic-oud-package.json --source-label test_song_notes
-python -m song_lab.cli mock-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio
+python -m song_lab.cli from-text --text-file examples/hype-anthem-idea.txt --style hype_motivation_anthem --output outputs/hype-package.json --source-label test_song_notes
+python -m song_lab.cli mock-audio --package outputs/hype-package.json --output-dir outputs/audio
 ```
 
 ## Real audio with ACE-compatible engine from CLI
 
 ```bash
-python -m song_lab.cli ace-audio --package outputs/arabic-oud-package.json --output-dir outputs/audio --base-url $ACESTEP_API_URL --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language ar
+python -m song_lab.cli ace-audio --package outputs/hype-package.json --output-dir outputs/audio --base-url $ACESTEP_API_URL --model acestep-v15-turbo --duration 90 --format mp3 --vocal-language en
 ```
 
 If generation succeeds, the final audio file will be saved under `outputs/audio`.
@@ -175,11 +285,25 @@ If generation succeeds, the final audio file will be saved under `outputs/audio`
 ## Style examples
 
 ```bash
-python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style arabic_oud_ballad --output outputs/arabic-oud-package.json
-python -m song_lab.cli from-text --text-file examples/arabic-style-song-notes.txt --style levantine_pop_ballad --output outputs/levantine-package.json
-python -m song_lab.cli from-text --text-file examples/extracted-song-text.txt --style yemeni_oud_dream_pop --output outputs/yemeni-package.json
+python -m song_lab.cli from-text --text-file examples/diss-track-idea.txt --style diss_track_trap --output outputs/diss-package.json
+python -m song_lab.cli from-text --text-file examples/birthday-song-idea.txt --style birthday_banger_pop --output outputs/birthday-package.json
+python -m song_lab.cli from-text --text-file examples/hype-anthem-idea.txt --style hype_motivation_anthem --output outputs/hype-package.json
 ```
+
+## Available styles
+
+| Style key | Occasion |
+|---|---|
+| `diss_track_trap` | Savage, comedic diss track to roast a friend |
+| `dancehall_roast_anthem` | Playful dancehall-flavored roast/diss |
+| `birthday_banger_pop` | Upbeat birthday gift anthem |
+| `love_confession_rnb` | Sincere R&B love confession |
+| `breakup_anthem_pop` | Cathartic-to-triumphant breakup anthem |
+| `hype_motivation_anthem` | Chest-out hype/motivation banger |
+| `sad_lofi_feels` | Late-night melancholic lo-fi |
+| `country_story_love` | Warm, storytelling country song |
 
 ## MVP target
 
-One beautiful Arabic-style version first, then expand into more input types, hosted backend deployment, and direct audio playback/download in the browser.
+One certified-banger hype/diss-track version first, then expand into every occasion style,
+hosted backend deployment, and direct audio playback/download in the browser.

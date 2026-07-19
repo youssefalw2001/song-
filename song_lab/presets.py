@@ -4,155 +4,213 @@ from song_lab.models import StylePreset
 
 
 STYLE_PRESETS: dict[str, StylePreset] = {
-    "yemeni_oud_dream_pop": StylePreset(
-        key="yemeni_oud_dream_pop",
-        title="Yemeni Oud Dream Pop",
-        tempo_bpm="76-84",
-        mood=["sad", "hypnotic", "romantic", "night-time", "spacious", "intimate"],
+    "dancehall_roast_anthem": StylePreset(
+        key="dancehall_roast_anthem",
+        title="Dancehall Roast Anthem",
+        tempo_bpm="95-108",
+        mood=["playful", "savage-but-fun", "sun-drenched", "confident", "catchy"],
         instruments=[
-            "oud",
-            "qanbus-style lute",
-            "soft frame drum",
-            "hand percussion",
-            "low strings",
-            "ambient pads",
-            "warm room reverb",
+            "dancehall riddim",
+            "steel pan hits",
+            "deep sub bass",
+            "syncopated clap pattern",
+            "vocal chops",
+            "bright synth stab",
         ],
         vocal_direction=(
-            "Deep emotional Arabic vocal with restrained Yemeni-inspired ornamentation, long held notes, "
-            "clear pronunciation, and call-and-response pauses for oud fills."
+            "Rhythmic, melodic sing-rap delivery with dancehall-style cadence and playful ad-libs. Confident, "
+            "comedic, and light-hearted -- never a mocking accent impression, just an energetic, danceable flow "
+            "with clear, punchy English lyrics built for a group of friends to laugh and sing along to."
         ),
         arrangement_notes=[
-            "Keep the song slow and spacious.",
-            "Let oud or qanbus answer the vocal after important lines.",
-            "Use percussion as pulse, not as a loud dance beat.",
-            "Keep the dream-pop atmosphere, but replace western brightness with warmer acoustic texture.",
-            "Chorus should be simple, memorable, and repeatable.",
+            "Land the funniest line right before the hook drops.",
+            "Keep the riddim bouncy and danceable, not aggressive.",
+            "Give the chorus a group-chant, sing-back quality.",
+            "Use vocal chops or an ad-lib tag as a repeatable meme-able moment.",
+            "Hook must land inside the first 8 seconds.",
         ],
         avoid=[
-            "generic belly-dance rhythm",
-            "trap drums in the first version",
-            "overly classical Arabic phrasing",
-            "literal translation",
-            "fake famous-singer voice cloning",
+            "hateful or slur-based language",
+            "targeting real strangers or protected traits",
+            "mocking accent caricature",
+            "generic EDM drop",
+            "flat, unrhythmic delivery",
         ],
     ),
-    "yemeni_wedding_modern": StylePreset(
-        key="yemeni_wedding_modern",
-        title="Modern Yemeni Wedding Energy",
-        tempo_bpm="96-112",
-        mood=["joyful", "communal", "percussive", "bright", "celebratory"],
-        instruments=["oud", "hand drums", "claps", "mizmar-like lead", "bass", "group chorus"],
-        vocal_direction="Confident Arabic lead vocal with group responses and celebratory energy.",
-        arrangement_notes=[
-            "Make rhythm and chorus the center.",
-            "Use group chant responses after lead vocal lines.",
-            "Keep hook short and easy to sing at a gathering.",
+    "diss_track_trap": StylePreset(
+        key="diss_track_trap",
+        title="Savage Diss Track",
+        tempo_bpm="70-75",
+        mood=["aggressive", "confident", "comedic-savage", "high-energy", "cocky"],
+        instruments=[
+            "808 sub bass",
+            "trap hi-hat rolls",
+            "dark synth stabs",
+            "vocal chop ad-libs",
+            "snare rolls",
+            "sparse piano stab",
         ],
-        avoid=["slow dream-pop pads", "too much sadness", "western pop-only drums"],
-    ),
-    "arabic_oud_ballad": StylePreset(
-        key="arabic_oud_ballad",
-        title="Arabic Oud Ballad",
-        tempo_bpm="70-88",
-        mood=["romantic", "sad", "warm", "cinematic", "intimate"],
-        instruments=["oud", "soft strings", "riq", "frame drum", "warm bass", "ambient pad"],
         vocal_direction=(
-            "Emotional Arabic lead vocal with clear pronunciation, tasteful melisma, long held chorus notes, "
-            "and expressive pauses between phrases."
+            "Confident half-time rap delivery with punchy, clearly enunciated punchlines so every roast line "
+            "actually lands. Braggadocious and comedic in tone, built for a friend-group laugh, not real harassment."
         ),
         arrangement_notes=[
-            "Center the oud and vocal melody.",
-            "Keep percussion subtle and supportive.",
-            "Use strings to lift the chorus.",
-            "Make the hook simple and singable across Arabic dialects.",
+            "Every bar should set up a punchline; the best punchline goes right before the hook.",
+            "Keep the hook short, chantable, and easy to quote back.",
+            "Use 808 bass drops to punctuate the hardest lines.",
+            "Leave a beat of silence right before the funniest line for comedic timing.",
         ],
-        avoid=["overcrowded percussion", "western EDM drop", "literal translation", "comic exaggeration"],
+        avoid=[
+            "hate speech or slurs",
+            "targeting protected characteristics",
+            "real threats or harassment content",
+            "mumbled, unclear delivery that buries the punchlines",
+            "generic trap with no hook",
+        ],
     ),
-    "levantine_pop_ballad": StylePreset(
-        key="levantine_pop_ballad",
-        title="Levantine Pop Ballad",
-        tempo_bpm="82-100",
-        mood=["romantic", "modern", "melodic", "emotional", "radio-ready"],
-        instruments=["oud", "piano", "strings", "soft pop drums", "bass", "light synth pads"],
+    "birthday_banger_pop": StylePreset(
+        key="birthday_banger_pop",
+        title="Birthday Banger",
+        tempo_bpm="118-128",
+        mood=["joyful", "celebratory", "singalong", "confetti-energy", "warm"],
+        instruments=[
+            "bright synth lead",
+            "four-on-the-floor kick",
+            "hand claps",
+            "punchy pop bass",
+            "party horn stabs",
+            "shimmering pads",
+        ],
         vocal_direction=(
-            "Smooth modern Arabic pop vocal with Levantine-style phrasing, clean diction, emotional softness, "
-            "and a chorus that feels easy to repeat."
+            "Upbeat, warm lead vocal built for a crowd to chant back. The person's name should land clearly and "
+            "joyfully in the hook -- this is a song made to be played out loud at their party."
         ),
         arrangement_notes=[
-            "Blend Arabic melody with polished pop structure.",
-            "Keep verses intimate and let the chorus open wider.",
-            "Use oud as color, not necessarily the only lead instrument.",
-            "Make the rhythm modern but not too club-heavy.",
+            "Say the birthday person's name in the first line and again in the hook.",
+            "Build to a big group-chant chorus by the second hook.",
+            "Keep verses light, funny, and specific to the person.",
+            "End on the biggest, loudest version of the hook.",
         ],
-        avoid=["too traditional only", "heavy trap drums", "unclear pronunciation", "stiff formal Arabic"],
+        avoid=["sad or minor-key tone", "slow ballad pacing", "generic happy-birthday melody quoting", "flat energy"],
     ),
-    "egyptian_shaabi_pop": StylePreset(
-        key="egyptian_shaabi_pop",
-        title="Egyptian Shaabi Pop",
-        tempo_bpm="104-124",
-        mood=["street", "playful", "energetic", "catchy", "bold"],
-        instruments=["accordion", "tabla", "claps", "synth bass", "brass hits", "shaabi percussion"],
+    "love_confession_rnb": StylePreset(
+        key="love_confession_rnb",
+        title="Love Confession R&B",
+        tempo_bpm="68-84",
+        mood=["romantic", "warm", "sincere", "intimate", "soulful"],
+        instruments=[
+            "warm electric piano",
+            "soft sub bass",
+            "brushed drums",
+            "airy string pads",
+            "subtle guitar fills",
+        ],
         vocal_direction=(
-            "Confident Arabic vocal with Egyptian pop attitude, punchy phrasing, clear hooks, and lively callouts."
+            "Smooth, emotionally sincere R&B vocal with tasteful runs and intimate, close-mic delivery. Every line "
+            "should feel like it's being said directly to one specific person, not a generic love song."
         ),
         arrangement_notes=[
-            "Make the rhythm instantly catchy.",
-            "Use short hook lines and repeatable crowd-response moments.",
-            "Let accordion or synth lead carry the main riff.",
-            "Keep the energy high without losing melodic shape.",
+            "Keep the verse intimate and conversational.",
+            "Let the chorus open up warmer and fuller without losing sincerity.",
+            "Use specific, personal details rather than generic love-song cliches.",
+            "Leave space after key lines for the instrumental to breathe.",
         ],
-        avoid=["slow cinematic sadness", "overly classical vocals", "generic Gulf percussion", "too much reverb"],
+        avoid=["cheesy generic love-song cliches", "overly busy arrangement", "cold or robotic delivery", "rushed pacing"],
     ),
-    "khaliji_gulf_pop": StylePreset(
-        key="khaliji_gulf_pop",
-        title="Khaliji Gulf Pop",
-        tempo_bpm="88-110",
-        mood=["elegant", "rhythmic", "romantic", "desert-night", "polished"],
-        instruments=["oud", "khaliji percussion", "claps", "strings", "soft synth", "deep bass"],
+    "breakup_anthem_pop": StylePreset(
+        key="breakup_anthem_pop",
+        title="Breakup Anthem",
+        tempo_bpm="100-116",
+        mood=["cathartic", "empowering", "bittersweet-to-triumphant", "driving"],
+        instruments=[
+            "driving pop-rock drums",
+            "electric guitar layers",
+            "synth stacks",
+            "big chorus bass",
+            "handclap layer in the chorus",
+        ],
         vocal_direction=(
-            "Elegant Arabic vocal with Gulf-style rhythmic phrasing, controlled ornamentation, and polished romantic delivery."
+            "Start emotionally raw and vulnerable in the verse, then build to a defiant, empowered, chest-out "
+            "delivery by the chorus -- the moment where the listener feels like they've moved on and won."
         ),
         arrangement_notes=[
-            "Use Gulf-inspired percussion patterns as the identity anchor.",
-            "Keep the groove rolling and graceful.",
-            "Let oud and strings answer vocal phrases.",
-            "Make the chorus feel luxurious and spacious.",
+            "Verse should feel a little wounded; chorus should feel like a release.",
+            "Build the arrangement so the second chorus hits bigger than the first.",
+            "Give the bridge a turning-point line that flips the emotion from hurt to strength.",
+            "End on the most triumphant version of the hook.",
         ],
-        avoid=["Egyptian shaabi accordion", "Maghrebi rai lead", "too much western rock guitar", "flat vocal delivery"],
+        avoid=["staying sad and defeated the whole song", "weak or timid chorus", "generic breakup cliches with no specific detail"],
     ),
-    "maghrebi_rai_fusion": StylePreset(
-        key="maghrebi_rai_fusion",
-        title="Maghrebi Rai Fusion",
-        tempo_bpm="94-118",
-        mood=["melancholic", "danceable", "romantic", "raw", "modern"],
-        instruments=["rai synth lead", "derbuka", "claps", "electric bass", "strings", "light guitar"],
+    "hype_motivation_anthem": StylePreset(
+        key="hype_motivation_anthem",
+        title="Hype Motivation Anthem",
+        tempo_bpm="70-80",
+        mood=["confident", "triumphant", "high-energy", "chest-out", "unstoppable"],
+        instruments=[
+            "massive 808 sub bass",
+            "anthemic synth stacks",
+            "crowd chant vocal stacks",
+            "hard-hitting trap drums",
+            "rising synth riser into the hook",
+        ],
         vocal_direction=(
-            "Expressive Arabic/Maghrebi-style vocal with emotional bends, direct delivery, and a catchy repeated refrain."
+            "Confident chant-rap hybrid delivery -- half rapped, half shouted hook -- built for pre-game, gym, or "
+            "'about to go handle business' energy. Every line should sound like a declaration, not a suggestion."
         ),
         arrangement_notes=[
-            "Balance sadness with movement.",
-            "Use a memorable synth or melodic lead hook.",
-            "Keep percussion danceable but not overpowering.",
-            "Make the refrain direct and easy to remember.",
+            "Open with a bold statement line, no slow build-up.",
+            "Make the hook a chantable, all-caps-energy line.",
+            "Use a riser or drum roll to launch into every hook.",
+            "Keep the whole track feeling like it's building toward one big moment.",
         ],
-        avoid=["formal classical Arabic ballad only", "Yemeni qanbus focus", "slow-only pacing", "over-polished sterile vocal"],
+        avoid=["soft or hesitant delivery", "slow sad tempo", "generic uninspired affirmations", "cluttered mix that buries the vocal"],
     ),
-    "arabic_cinematic_epic": StylePreset(
-        key="arabic_cinematic_epic",
-        title="Arabic Cinematic Epic",
-        tempo_bpm="72-96",
-        mood=["powerful", "dramatic", "spiritual", "grand", "emotional"],
-        instruments=["oud", "choir", "large strings", "frame drums", "low brass", "cinematic percussion"],
+    "sad_lofi_feels": StylePreset(
+        key="sad_lofi_feels",
+        title="Sad Lo-Fi Feels",
+        tempo_bpm="70-90",
+        mood=["melancholic", "nostalgic", "cozy-sad", "relatable", "late-night"],
+        instruments=[
+            "dusty lo-fi drum loop",
+            "mellow piano or guitar chords",
+            "warm vinyl-texture crackle",
+            "soft sub bass",
+            "distant ambient pad",
+        ],
         vocal_direction=(
-            "Powerful Arabic lead vocal with dramatic phrasing, wide dynamic range, and optional choir response in the chorus."
+            "Soft, intimate, slightly detached vocal delivery -- conversational sadness rather than melodrama. "
+            "Should feel like a diary entry set to music, the kind of thing someone posts at 2am."
         ),
         arrangement_notes=[
-            "Start intimate and build to a large cinematic chorus.",
-            "Use frame drums and strings for emotional lift.",
-            "Add choir responses only where they increase power.",
-            "Keep the main melody memorable, not just dramatic texture.",
+            "Keep the mix warm, dusty, and low-key -- never polished or bright.",
+            "Let the hook be quietly devastating rather than loud.",
+            "Use negative space; do not fill every gap with instrumentation.",
+            "Keep the vocal close and intimate in the mix.",
         ],
-        avoid=["small dry mix", "comedy tone", "generic trailer music without Arabic identity", "rushed lyrics"],
+        avoid=["bright pop production", "loud aggressive drums", "overly dramatic vocal performance", "generic sad-song cliches"],
+    ),
+    "country_story_love": StylePreset(
+        key="country_story_love",
+        title="Country Story Song",
+        tempo_bpm="80-100",
+        mood=["warm", "nostalgic", "storytelling", "heartfelt", "down-to-earth"],
+        instruments=[
+            "acoustic guitar",
+            "light steel guitar",
+            "warm upright-style bass",
+            "simple brushed percussion",
+            "subtle harmonica accent",
+        ],
+        vocal_direction=(
+            "Warm, conversational storytelling vocal -- like telling a friend a true story over a porch "
+            "conversation. Sincere, plain-spoken, with real specific details rather than vague sentiment."
+        ),
+        arrangement_notes=[
+            "Tell a clear, specific story with a beginning, middle, and a turn.",
+            "Keep the instrumentation simple so the story stays the focus.",
+            "Let the chorus land as the emotional takeaway of the story.",
+            "Use one vivid, specific image the listener will remember.",
+        ],
+        avoid=["overproduced pop-country sheen", "vague generic lyrics", "busy arrangement that competes with the vocal"],
     ),
 }
