@@ -32,6 +32,25 @@ acemusic.ai was fully open/keyless is no longer accurate -- you must obtain an A
 from acemusic.ai and set `ACEMUSIC_API_KEY` (or `ACESTEP_API_KEY`) before real generation
 will work against that backend. Budget for this before assuming a $0 generation cost.
 
+**Never commit a real key or paste one into chat/logs.** Set it as an environment variable
+(`export ACEMUSIC_API_KEY=...`) or in a git-ignored `.env` file only. Any key that has been
+pasted into a chat, ticket, or log should be treated as compromised and rotated immediately.
+
+### Verified live end-to-end
+
+With a valid `ACEMUSIC_API_KEY` set, `python scripts/stress_test.py live --requests 1` was
+run against the real backend and produced a genuine, valid song:
+
+- Format: MP3, ID3v2.4, MPEG layer III
+- Duration: 30.02s (requested 30s -- exact match)
+- Bitrate: 128kbps, 48kHz, stereo
+- Generation latency: ~32 seconds for a 30-second song
+- File validated by `mutagen` as real, decodable audio (not a truncated/corrupt download)
+
+This confirms the full pipeline -- prompt building, BPM hint forwarding, the hardened
+provider's retry/timeout/validation logic, and real ACE-Step generation -- works end to end
+against the production acemusic.ai backend, not just the mock path.
+
 ## Hardened ACE-Step provider
 
 `song_lab/providers/ace_step_api.py` is production-grade, not a thin HTTP wrapper:
