@@ -201,6 +201,14 @@ def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
         brief = build_song_brief(STYLE_PRESETS[request.style], request.text, plan)
         data["song_brief"] = brief
 
+    # acemusic.ai is a free, no-SLA upstream whose edge intermittently returns a
+    # 504 under load. Each retry re-runs the full (slow) generation, so the stock
+    # 3 retries can stretch a single failed request past 4 minutes before giving
+    # up -- the "loads forever then fails" symptom. Fail fast instead: one quick
+    # retry, then surface a clear "studio busy, try again" so the user can re-fire
+    # (a fresh attempt frequently lands when the upstream is less congested).
+    # Tunable via ACESTEP_GENERATE_MAX_RETRIES for operators who want more grind.
+    generate_max_retries = int(os.getenv("ACESTEP_GENERATE_MAX_RETRIES", "1"))
     try:
         with AceStepApiProvider(
             base_url=request.base_url,
@@ -209,6 +217,7 @@ def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
             audio_format=request.audio_format,
             vocal_language=request.vocal_language,
             candidates=request.candidates,
+            max_retries=generate_max_retries,
         ) as provider:
             result = provider.run(
                 _job_from_package(
