@@ -187,27 +187,37 @@ After Render deploys, copy your Render service URL, for example:
 https://viral-song-lab-api.onrender.com
 ```
 
-Then open the GitHub Pages site and paste that into:
+## Bake the backend URL into the frontend (one-time, permanent)
 
-```text
-Backend URL
+Visitors never see or configure a backend URL -- it's baked into the site once, by you, and
+then it just works forever. Open `docs/index.html`, find this block near the top of the
+`<script>` section, and set the URL once:
+
+```js
+const CONFIG = {
+  BACKEND_URL: 'https://your-render-service.onrender.com' // <<< set this once
+};
 ```
 
-Click:
+Commit and push. That's it -- every visitor's browser now talks to your backend automatically,
+with zero setup, forever. If you ever move to a different Render service or your own
+self-hosted backend, update this one line and push again.
 
-```text
-Check backend
-Test without AI
-Generate real audio
-```
+A "Developer settings" panel is still available at the bottom of the page (collapsed by
+default) with a backend override field, health check, and manual/mock generation tools --
+useful for you when testing, invisible to a normal visitor.
 
 ## How the site works
 
-The site is the control panel. It calls the FastAPI backend to:
+The main experience is one screen, one button: type an idea (or tap an occasion card to
+pre-fill one), hit "Make My Banger," and the backend handles lyrics, style, and real audio
+generation automatically. No manual steps, no visible configuration.
+
+Under the hood, the site calls the FastAPI backend at the URL baked into `CONFIG.BACKEND_URL`:
 
 ```text
 GET  /health
-POST /package/from-text
+POST /autopilot/plan
 POST /generate/from-text/mock
 POST /generate/from-text/ace
 POST /score
@@ -221,10 +231,9 @@ GitHub Pages is frontend-only static hosting. Render runs the backend and keeps 
 ```text
 1. Deploy backend on Render from the repo blueprint.
 2. Add environment variables in Render.
-3. Enable GitHub Pages from /docs.
-4. Open the Pages site.
-5. Paste the Render backend URL.
-6. Generate from the site.
+3. Bake the Render URL into CONFIG.BACKEND_URL in docs/index.html (one time).
+4. Enable GitHub Pages from /docs.
+5. Open the Pages site and just type an idea -- no setup needed.
 ```
 
 ## Local full app test
