@@ -283,6 +283,12 @@ def generate_from_lyrics(request: LyricsGenerateRequest) -> dict:
             vocal_language=request.vocal_language,
             candidates=request.candidates,
             max_retries=generate_max_retries,
+            # We already supply the lyrics AND a fully composed style prompt, so
+            # the model has nothing to author -- skip the thinking/chain-of-thought
+            # steps to shave latency and stay under the upstream's ~60s gateway
+            # timeout (the main cause of 504 failures on this route).
+            thinking=False,
+            use_cot=False,
         ) as provider:
             result = provider.run(job)
     except AceStepApiError as exc:

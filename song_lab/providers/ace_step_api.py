@@ -92,6 +92,7 @@ class AceStepApiProvider(SongProvider):
         audio_format: str = "mp3",
         thinking: bool = True,
         use_format: bool = True,
+        use_cot: bool = True,
         api_mode: str | None = None,
         concurrency_limiter: ConcurrencyLimiter | None = None,
         transport: httpx.BaseTransport | None = None,
@@ -109,6 +110,11 @@ class AceStepApiProvider(SongProvider):
         self.audio_format = audio_format
         self.thinking = thinking
         self.use_format = use_format
+        # Chain-of-thought caption/language reasoning. Useful when ACE-Step must
+        # author its own lyrics; pure overhead (and extra latency that risks the
+        # upstream's ~60s gateway timeout) on the tagged path where we already
+        # supply both the lyrics and the full style prompt.
+        self.use_cot = use_cot
         configured_mode = api_mode or os.getenv("ACESTEP_API_MODE") or os.getenv("ACEMUSIC_API_MODE")
         if configured_mode:
             self.api_mode = configured_mode.strip().lower()
@@ -295,8 +301,8 @@ class AceStepApiProvider(SongProvider):
             "thinking": self.thinking,
             "use_format": self.use_format,
             "sample_mode": author_mode,
-            "use_cot_caption": True,
-            "use_cot_language": True,
+            "use_cot_caption": self.use_cot,
+            "use_cot_language": self.use_cot,
             "batch_size": self.candidates,
             "audio_config": audio_config,
         }
