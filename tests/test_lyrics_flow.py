@@ -55,6 +55,34 @@ class TestComposeStyle:
                 assert 40 <= c.bpm <= 220
 
 
+class TestAesthetics:
+    def test_aesthetic_appends_production_dna_to_prompt(self):
+        base = compose_style(accent="rnb_smooth", genre="pop", vibe="sad", aesthetic="none")
+        lana = compose_style(accent="rnb_smooth", genre="pop", vibe="sad", aesthetic="sadgirl_cinematic")
+        assert "orchestral strings" in lana.prompt
+        assert "orchestral strings" not in base.prompt
+        assert lana.aesthetic == "sadgirl_cinematic"
+        assert "Sad-Girl Cinematic" in lana.summary
+
+    def test_slowed_and_spedup_override_tempo(self):
+        slowed = compose_style(genre="pop", tempo="fast", aesthetic="slowed_reverb")
+        sped = compose_style(genre="pop", tempo="slow", aesthetic="sped_up")
+        assert slowed.tempo == "slow"
+        assert slowed.bpm == GENRES["pop"].bpm[0]
+        assert sped.tempo == "fast"
+        assert sped.bpm == GENRES["pop"].bpm[2]
+
+    def test_none_aesthetic_adds_nothing(self):
+        c = compose_style(accent="jamaican", genre="dancehall", vibe="funny", aesthetic="none")
+        assert c.aesthetic == "none"
+        # Summary has exactly the base 4 separators, no trailing aesthetic segment.
+        assert c.summary.count("\u00b7") == 4
+
+    def test_unknown_aesthetic_falls_back_to_none(self):
+        c = compose_style(genre="pop", aesthetic="does_not_exist")
+        assert c.aesthetic == "none"
+
+
 def _install_fake_provider(monkeypatch, captured):
     from pathlib import Path
 
@@ -121,6 +149,32 @@ class TestGenerateFromLyricsRoute:
         assert data["sound"]["bpm"] == GENRES["dancehall"].bpm[2]
         assert data["generation"]["status"] == "generated"
 
+    def test_aesthetic_trend_pack_reaches_the_prompt(self, monkeypatch):
+        from song_lab.api.app import app
+
+        captured = {}
+        _install_fake_provider(monkeypatch, captured)
+
+        with TestClient(app) as client:
+            response = client.post(
+                "/generate/from-lyrics",
+                json={
+                    "lyrics": "[Chorus]\nchills down my spine",
+                    "accent": "jamaican",
+                    "genre": "dancehall",
+                    "vibe": "triumphant",
+                    "aesthetic": "sadgirl_cinematic",
+                    "tempo": "fast",
+                },
+            )
+
+        assert response.status_code == 200
+        job = captured["job"]
+        assert "orchestral strings" in job.prompt  # the trend-pack DNA made it in
+        # Sad-Girl Cinematic forces a slow tempo regardless of the requested "fast".
+        assert job.bpm_hint == GENRES["dancehall"].bpm[0]
+        assert response.json()["sound"]["aesthetic"] == "sadgirl_cinematic"
+
     def test_fail_fast_retries_are_applied(self, monkeypatch):
         from song_lab.api.app import app
 
@@ -159,7 +213,9 @@ class TestSoundOptionsRoute:
             response = client.get("/sound-options")
         assert response.status_code == 200
         data = response.json()
-        for section in ("accents", "genres", "vibes", "voices", "tempos", "lyric_starters"):
+        for section in ("accents", "genres", "vibes", "aesthetics", "voices", "tempos", "lyric_starters"):
             assert isinstance(data[section], list) and data[section]
         assert any(a["key"] == "jamaican" for a in data["accents"])
         assert any(s["key"] == "birthday" for s in data["lyric_starters"])
+        assert any(a["key"] == "sadgirl_cinematic" for a in data["aesthetics"])
+        assert any(a["key"] == "none" for a in data["aesthetics"])

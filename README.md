@@ -64,9 +64,13 @@ Three steps:
    working song instead of facing a blank page.
 2. **Pick the sound.** Tap-to-choose chips for vocal style / accent (Jamaican Dancehall,
    Bollywood, UK Drill, Southern Country, Auto-Tune Trap, Smooth R&B, Afrobeats,
-   Dramatic/Opera), beat/genre (trap, dancehall, drill, afrobeat, lo-fi, pop, R&B, EDM,
-   country, boom-bap), vibe, plus voice / tempo / length toggles. A live summary line shows
-   the chosen sound.
+   Dramatic/Opera, Sad-Girl Breathy, Indie Whisper, Deep Crooner), beat/genre (trap,
+   dancehall, drill, afrobeat, lo-fi, pop, R&B, EDM, country, boom-bap), vibe, plus voice /
+   tempo / length toggles. A live summary line shows the chosen sound.
+   - **Trend packs (optional "Aesthetic" layer):** one tap applies a whole viral short-form
+     mood-world on top of the beat -- Sad-Girl Cinematic, Baroque Vintage, Slowed + Reverb,
+     Sped-Up, Phonk, Dreamy Bedroom, Epic Cinematic, Vintage Vinyl. A pack appends production
+     DNA and can override tempo (Slowed forces slow, Sped-Up forces fast).
 3. **Generate.** One take, fail-fast retries, real vocals in ~1-3 minutes.
 
 Under the hood, `song_lab/sound_options.py` holds the curated menus and `compose_style()`, a
@@ -78,7 +82,10 @@ a `SongJob` with `author_lyrics=False` (the tagged `<prompt>`+`<lyrics>` path) a
 fail-fast retry policy as the other generation routes. `GET /sound-options` exposes the menus
 and lyric starters for the frontend. Accents are framed as celebrated musical vocal styles (a
 sound you choose), never a mocking impression of a person, and the no-hate guardrail stays in
-place.
+place. The optional `aesthetic` argument (`AESTHETICS` in `sound_options.py`) layers a trend
+pack's production DNA onto the prompt and may override the tempo; vocal-style fragments
+describe a sonic aesthetic only and never instruct the model to imitate a specific real
+artist's voice.
 
 ## ACE-Step authors its own lyrics (default, zero external LLM)
 

@@ -23,6 +23,7 @@ from song_lab.providers.ace_step_api import AceStepApiError, AceStepApiProvider
 from song_lab.providers.mock import MockSongProvider
 from song_lab.scoring import VersionScore, append_score
 from song_lab.sound_options import (
+    AESTHETICS,
     GENRES,
     LYRIC_STARTERS,
     TEMPOS,
@@ -261,6 +262,7 @@ def generate_from_lyrics(request: LyricsGenerateRequest) -> dict:
         vibe=request.vibe,
         voice=request.voice,
         tempo=request.tempo,
+        aesthetic=request.aesthetic,
     )
     job = SongJob(
         prompt=composed.prompt,
@@ -296,6 +298,7 @@ def generate_from_lyrics(request: LyricsGenerateRequest) -> dict:
             "vibe": composed.vibe,
             "voice": composed.voice,
             "tempo": composed.tempo,
+            "aesthetic": composed.aesthetic,
         },
         "lyrics": lyrics,
         "generation": _result_with_url(result),
@@ -309,6 +312,7 @@ def sound_options() -> dict:
         "accents": [{"key": v.key, "label": v.label, "suggested_genres": list(v.suggested_genres)} for v in VOCAL_STYLES.values()],
         "genres": [{"key": g.key, "label": g.label} for g in GENRES.values()],
         "vibes": [{"key": v.key, "label": v.label} for v in VIBES.values()],
+        "aesthetics": [{"key": a.key, "label": a.label} for a in AESTHETICS.values()],
         "voices": [{"key": k, "label": label} for k, label in VOICES.items()],
         "tempos": [{"key": k, "label": k.capitalize()} for k in TEMPOS],
         "lyric_starters": [{"key": k, "label": v["label"], "lyrics": v["lyrics"]} for k, v in LYRIC_STARTERS.items()],

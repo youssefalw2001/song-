@@ -68,6 +68,7 @@ class LyricsGenerateRequest(BaseModel):
     vibe: str = Field(default="hype", description="Mood key from sound_options.VIBES.")
     voice: str = Field(default="male", description="Voice key: male, female, or duet.")
     tempo: str = Field(default="medium", description="Tempo key: slow, medium, or fast.")
+    aesthetic: str = Field(default="none", description="Optional trend pack from sound_options.AESTHETICS (e.g. sadgirl_cinematic, slowed_reverb). 'none' = no overlay.")
     duration: int = Field(default=45, ge=10, le=600)
     output_dir: Path = Path("outputs/audio")
     base_url: str = "http://127.0.0.1:8001"

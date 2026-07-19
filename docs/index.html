@@ -306,6 +306,7 @@ footer a:hover{color:var(--text)}
         <div class="opt-group"><div class="opt-title">🎤 Vocal style</div><div class="chips" id="accentChips"></div></div>
         <div class="opt-group"><div class="opt-title">🥁 Beat</div><div class="chips" id="genreChips"></div></div>
         <div class="opt-group"><div class="opt-title">🎭 Vibe</div><div class="chips" id="vibeChips"></div></div>
+        <div class="opt-group"><div class="opt-title">✨ Aesthetic <span style="color:var(--muted-soft);font-weight:600">— trendy TikTok sound (optional)</span></div><div class="chips" id="aestheticChips"></div></div>
         <div class="row3">
           <div class="opt-group"><div class="opt-title">🎙 Voice</div><div class="chips" id="voiceChips"></div></div>
           <div class="opt-group"><div class="opt-title">⚡ Tempo</div><div class="chips" id="tempoChips"></div></div>
@@ -488,7 +489,8 @@ function selectOccasion(occKey){
   });
   const preset = occasionPreset[occKey];
   if(preset){
-    ['accent','genre','vibe','voice','tempo'].forEach(k=>{ if(preset[k]) choice[k] = preset[k]; });
+    choice.aesthetic = 'none'; // reset first so presets without one stay clean
+    ['accent','genre','vibe','voice','tempo','aesthetic'].forEach(k=>{ if(preset[k]) choice[k] = preset[k]; });
     const ta = $('lyricsInput');
     if(!ta.value.trim()){ ta.value = STARTERS[preset.starter] ? STARTERS[preset.starter].lyrics : BLANK_LYRICS; }
     renderAllChips();
@@ -598,7 +600,9 @@ const SOUND = {
     {key:'jamaican',label:'Jamaican Dancehall'},{key:'bollywood',label:'Bollywood / Indian'},
     {key:'uk_drill',label:'UK Drill'},{key:'country',label:'Southern Country'},
     {key:'autotune_trap',label:'Auto-Tune Trap'},{key:'rnb_smooth',label:'Smooth R&B'},
-    {key:'afrobeats',label:'Afrobeats'},{key:'dramatic',label:'Dramatic / Opera'}
+    {key:'afrobeats',label:'Afrobeats'},{key:'dramatic',label:'Dramatic / Opera'},
+    {key:'sadgirl_breathy',label:'Sad-Girl Breathy'},{key:'indie_whisper',label:'Indie Whisper'},
+    {key:'deep_crooner',label:'Deep Crooner'}
   ],
   genres:[
     {key:'trap',label:'Trap'},{key:'dancehall',label:'Dancehall / Reggae'},{key:'drill',label:'Drill'},
@@ -608,7 +612,16 @@ const SOUND = {
   vibes:[
     {key:'funny',label:'Funny'},{key:'savage',label:'Savage / Diss'},{key:'romantic',label:'Romantic'},
     {key:'sad',label:'Sad'},{key:'hype',label:'Hype'},{key:'chill',label:'Chill'},
-    {key:'dark',label:'Dark'},{key:'triumphant',label:'Triumphant'}
+    {key:'dark',label:'Dark'},{key:'triumphant',label:'Triumphant'},{key:'dreamy',label:'Dreamy'},
+    {key:'nostalgic',label:'Nostalgic'},{key:'seductive',label:'Seductive'},{key:'ethereal',label:'Ethereal'},
+    {key:'cinematic',label:'Cinematic'}
+  ],
+  aesthetics:[
+    {key:'none',label:'None'},{key:'sadgirl_cinematic',label:'🌹 Sad-Girl Cinematic'},
+    {key:'baroque_vintage',label:'🎻 Baroque Vintage'},{key:'slowed_reverb',label:'🕯 Slowed + Reverb'},
+    {key:'sped_up',label:'⚡ Sped-Up'},{key:'phonk',label:'😈 Phonk'},
+    {key:'dreamy_bedroom',label:'🌙 Dreamy Bedroom'},{key:'epic_cinematic',label:'🎬 Epic Cinematic'},
+    {key:'vintage_vinyl',label:'📻 Vintage Vinyl'}
   ],
   voices:[{key:'male',label:'Male'},{key:'female',label:'Female'},{key:'duet',label:'Duet'}],
   tempos:[{key:'slow',label:'Slow'},{key:'medium',label:'Medium'},{key:'fast',label:'Fast'}],
@@ -617,7 +630,7 @@ const SOUND = {
 const labelFor = (list, key) => (list.find(o=>String(o.key)===String(key))||{}).label || key;
 
 // Current selections (defaults mirror the backend defaults).
-const choice = {accent:'rnb_smooth', genre:'pop', vibe:'hype', voice:'male', tempo:'medium', length:45};
+const choice = {accent:'rnb_smooth', genre:'pop', vibe:'hype', aesthetic:'none', voice:'male', tempo:'medium', length:45};
 
 // Fill-in-the-blank lyric starters (mirror of backend LYRIC_STARTERS). [BRACKETS] = swap in.
 const STARTERS = {
@@ -633,11 +646,11 @@ const occasionPreset = {
   diss_track_trap:      {starter:'diss',     accent:'autotune_trap', genre:'trap',      vibe:'savage',     voice:'male',   tempo:'medium'},
   dancehall_roast_anthem:{starter:'diss',    accent:'jamaican',      genre:'dancehall', vibe:'funny',      voice:'male',   tempo:'fast'},
   birthday_banger_pop:  {starter:'birthday', accent:'rnb_smooth',    genre:'pop',       vibe:'hype',       voice:'female', tempo:'fast'},
-  love_confession_rnb:  {starter:'love',     accent:'rnb_smooth',    genre:'rnb',       vibe:'romantic',   voice:'male',   tempo:'slow'},
+  love_confession_rnb:  {starter:'love',     accent:'sadgirl_breathy',genre:'rnb',      vibe:'romantic',   voice:'female', tempo:'slow',   aesthetic:'sadgirl_cinematic'},
   breakup_anthem_pop:   {starter:'love',     accent:'rnb_smooth',    genre:'pop',       vibe:'triumphant', voice:'female', tempo:'medium'},
   hype_motivation_anthem:{starter:'hype',    accent:'autotune_trap', genre:'trap',      vibe:'hype',       voice:'male',   tempo:'medium'},
-  sad_lofi_feels:       {starter:'love',     accent:'rnb_smooth',    genre:'lofi',      vibe:'sad',        voice:'male',   tempo:'slow'},
-  country_story_love:   {starter:'love',     accent:'country',       genre:'country',   vibe:'romantic',   voice:'male',   tempo:'medium'}
+  sad_lofi_feels:       {starter:'love',     accent:'indie_whisper', genre:'lofi',      vibe:'sad',        voice:'male',   tempo:'slow',   aesthetic:'slowed_reverb'},
+  country_story_love:   {starter:'love',     accent:'country',       genre:'country',   vibe:'nostalgic',  voice:'male',   tempo:'medium', aesthetic:'vintage_vinyl'}
 };
 
 function renderChips(containerId, list, choiceKey){
@@ -654,6 +667,7 @@ function renderAllChips(){
   renderChips('accentChips', SOUND.accents, 'accent');
   renderChips('genreChips',  SOUND.genres,  'genre');
   renderChips('vibeChips',   SOUND.vibes,   'vibe');
+  renderChips('aestheticChips', SOUND.aesthetics, 'aesthetic');
   renderChips('voiceChips',  SOUND.voices,  'voice');
   renderChips('tempoChips',  SOUND.tempos,  'tempo');
   renderChips('lengthChips', SOUND.lengths, 'length');
@@ -668,16 +682,18 @@ function renderStarters(){
   }));
 }
 function updateSoundSummary(){
-  $('soundSummary').innerHTML = 'Your sound: <b>' + labelFor(SOUND.accents, choice.accent) + '</b> \u00b7 ' +
+  let s = 'Your sound: <b>' + labelFor(SOUND.accents, choice.accent) + '</b> \u00b7 ' +
     labelFor(SOUND.genres, choice.genre) + ' \u00b7 ' + labelFor(SOUND.vibes, choice.vibe) + ' \u00b7 ' +
     labelFor(SOUND.voices, choice.voice) + ' voice \u00b7 ' + labelFor(SOUND.tempos, choice.tempo) + ' \u00b7 ' +
     labelFor(SOUND.lengths, choice.length);
+  if(choice.aesthetic && choice.aesthetic !== 'none'){ s += ' \u00b7 <b style="color:var(--accent)">' + labelFor(SOUND.aesthetics, choice.aesthetic) + '</b>'; }
+  $('soundSummary').innerHTML = s;
 }
 
 function lyricsPayload(lyrics){
   return {
     lyrics,
-    accent: choice.accent, genre: choice.genre, vibe: choice.vibe,
+    accent: choice.accent, genre: choice.genre, vibe: choice.vibe, aesthetic: choice.aesthetic,
     voice: choice.voice, tempo: choice.tempo, duration: Number(choice.length)||45,
     base_url:'https://api.acemusic.ai', model:'acestep-v15-turbo',
     audio_format:'mp3', vocal_language:'en', candidates:1
