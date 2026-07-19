@@ -9,6 +9,11 @@ class TextPackageRequest(BaseModel):
     text: str = Field(..., min_length=1)
     style: str = "hype_motivation_anthem"
     source_label: str = "api_text_input"
+    creative_angle: str = Field(default="", description="Per-song creative angle from the autopilot plan, merged into the music/vocal prompts on top of the style preset.")
+    mood: str = Field(default="", description="Per-song mood from the autopilot plan, merged on top of the style preset's baseline mood.")
+    trend_dna: str = Field(default="", description="Per-song style DNA from the autopilot plan, merged into the music prompt.")
+    instrumental_notes: str = Field(default="", description="Per-song instrumental direction from the autopilot plan, merged into the music prompt.")
+    voice_direction: str = Field(default="", description="Per-song vocal character from the autopilot plan, merged into the vocal prompt.")
 
 
 class FilePackageRequest(BaseModel):

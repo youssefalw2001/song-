@@ -166,7 +166,7 @@ def _choose_trend_profile(text: str) -> dict:
 
 @app.post("/package/from-text")
 def package_from_text(request: TextPackageRequest) -> dict:
-    package = _package_from_text_request(request.text, request.style, request.source_label)
+    package = _package_from_text_request(request.text, request.style, request.source_label, _plan_from_request(request))
     data = package.model_dump()
     data["input_source"] = {"kind": "api_text", "source_label": request.source_label}
     return data
@@ -174,7 +174,7 @@ def package_from_text(request: TextPackageRequest) -> dict:
 
 @app.post("/generate/from-text/mock")
 def generate_from_text_mock(request: TextAceGenerateRequest) -> dict:
-    package = _package_from_text_request(request.text, request.style, request.source_label)
+    package = _package_from_text_request(request.text, request.style, request.source_label, _plan_from_request(request))
     data = package.model_dump()
     if request.lyrics.strip():
         data["lyric_adaptation_prompt"] = request.lyrics.strip()
@@ -185,7 +185,7 @@ def generate_from_text_mock(request: TextAceGenerateRequest) -> dict:
 
 @app.post("/generate/from-text/ace")
 def generate_from_text_ace(request: TextAceGenerateRequest) -> dict:
-    package = _package_from_text_request(request.text, request.style, request.source_label)
+    package = _package_from_text_request(request.text, request.style, request.source_label, _plan_from_request(request))
     data = package.model_dump()
     if request.lyrics.strip():
         data["lyric_adaptation_prompt"] = request.lyrics.strip()
@@ -268,11 +268,30 @@ def improve(request: ImproveRequest) -> dict:
     return {"output_path": str(request.output_path), "improvement_source": improved.get("improvement_source", {})}
 
 
-def _package_from_text_request(text: str, style: str, source_label: str):
+def _plan_from_request(request: TextPackageRequest) -> dict | None:
+    """Extract the per-song creative fields the frontend forwards from the autopilot plan.
+
+    Returns None (not an empty dict) when every field is blank, so
+    build_conversion_package's style-only prompt behavior is preserved for
+    callers that never had an autopilot plan (manual studio, plain CLI use).
+    """
+    fields = {
+        "creative_angle": request.creative_angle,
+        "mood": request.mood,
+        "trend_dna": request.trend_dna,
+        "instrumental_notes": request.instrumental_notes,
+        "voice_direction": request.voice_direction,
+    }
+    if not any(value.strip() for value in fields.values()):
+        return None
+    return fields
+
+
+def _package_from_text_request(text: str, style: str, source_label: str, plan: dict | None = None):
     if style not in STYLE_PRESETS:
         raise HTTPException(status_code=400, detail=f"Unknown style: {style}")
     source_text = f"Source label: {source_label}\n\nTreat this as extracted song material. Preserve the emotional meaning, not exact wording.\n\n{text.strip()}"
-    return build_conversion_package(source_text=source_text, style_key=style)
+    return build_conversion_package(source_text=source_text, style_key=style, plan=plan)
 
 
 def _read_package(package_path: Path) -> dict:

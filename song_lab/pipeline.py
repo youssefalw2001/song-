@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from song_lab.models import ConversionPackage, StylePreset
 from song_lab.presets import STYLE_PRESETS
 
@@ -11,8 +13,30 @@ LEGAL_SAFETY_NOTE = (
     "hate speech, slurs, or attacks on protected characteristics."
 )
 
+# Keys read from an autopilot plan dict when merging it into the music/vocal
+# prompts. Kept as a single source of truth so build_music_prompt and
+# build_vocal_prompt agree on the plan's shape.
+_PLAN_CREATIVE_ANGLE_KEY = "creative_angle"
+_PLAN_MOOD_KEY = "mood"
+_PLAN_TREND_DNA_KEY = "trend_dna"
+_PLAN_INSTRUMENTAL_NOTES_KEY = "instrumental_notes"
+_PLAN_VOICE_DIRECTION_KEY = "voice_direction"
 
-def build_conversion_package(source_text: str, style_key: str) -> ConversionPackage:
+
+def build_conversion_package(source_text: str, style_key: str, plan: dict[str, Any] | None = None) -> ConversionPackage:
+    """Build the full prompt package for one song.
+
+    `plan` is the per-song creative output from the autopilot planner
+    (song_lab/autopilot.py) -- creative_angle, mood, trend_dna,
+    instrumental_notes, voice_direction. When provided, it is merged into
+    the music and vocal prompts on top of the style preset's fixed
+    scaffold, so two songs using the same style preset (e.g. two diss
+    tracks) still produce genuinely different instructions to the audio
+    model instead of near-identical ones that only differ in lyrics.
+    `plan` is optional and defaults to None so existing callers (the CLI,
+    manual/no-plan API requests) are unaffected and get the original
+    style-only prompts.
+    """
     if style_key not in STYLE_PRESETS:
         available = ", ".join(sorted(STYLE_PRESETS))
         raise ValueError(f"Unknown style preset '{style_key}'. Available presets: {available}")
@@ -24,8 +48,8 @@ def build_conversion_package(source_text: str, style_key: str) -> ConversionPack
         style=style,
         analysis_prompt=build_analysis_prompt(source_text),
         lyric_adaptation_prompt=build_lyric_adaptation_prompt(source_text, style.title),
-        music_prompt=build_music_prompt(style),
-        vocal_prompt=build_vocal_prompt(style),
+        music_prompt=build_music_prompt(style, plan),
+        vocal_prompt=build_vocal_prompt(style, plan),
         scoring_rubric=build_scoring_rubric(),
         iteration_checklist=build_iteration_checklist(),
         legal_safety_note=LEGAL_SAFETY_NOTE,
@@ -80,29 +104,71 @@ Output format:
 """.strip()
 
 
-def build_music_prompt(style: StylePreset) -> str:
+def build_music_prompt(style: StylePreset, plan: dict[str, Any] | None = None) -> str:
+    """Build the music-generation prompt sent to the audio model.
+
+    The style preset supplies the fixed genre scaffold (instruments, BPM
+    range, arrangement rules, what to avoid) so the output stays coherent
+    with the requested style. When a plan is supplied, its per-song
+    creative_angle/mood/trend_dna/instrumental_notes are layered on top so
+    the specific vibe of THIS song (funny vs. hard vs. petty, dancehall-
+    leaning vs. trap-leaning, playful ad-libs vs. cold and clinical) reaches
+    the audio model instead of being discarded after the lyrics step.
+    """
     instruments = ", ".join(style.instruments)
     mood = ", ".join(style.mood)
     arrangement = " ".join(style.arrangement_notes)
     avoid = ", ".join(style.avoid)
 
-    return f"""Create an original song in this style: {style.title}.
+    plan = plan or {}
+    creative_angle = str(plan.get(_PLAN_CREATIVE_ANGLE_KEY) or "").strip()
+    plan_mood = str(plan.get(_PLAN_MOOD_KEY) or "").strip()
+    trend_dna = str(plan.get(_PLAN_TREND_DNA_KEY) or "").strip()
+    instrumental_notes = str(plan.get(_PLAN_INSTRUMENTAL_NOTES_KEY) or "").strip()
 
-Mood: {mood}.
+    vibe_lines = []
+    if creative_angle:
+        vibe_lines.append(f"This song's specific angle: {creative_angle}")
+    if plan_mood:
+        vibe_lines.append(f"This song's specific mood (on top of the style's baseline mood): {plan_mood}")
+    if trend_dna:
+        vibe_lines.append(f"This song's specific style DNA: {trend_dna}")
+    if instrumental_notes:
+        vibe_lines.append(f"This song's specific instrumental direction: {instrumental_notes}")
+    vibe_section = ("\n" + "\n".join(vibe_lines) + "\n") if vibe_lines else ""
+
+    return f"""Create an original song in this style: {style.title}.
+{vibe_section}
+Mood (style baseline): {mood}.
 Tempo: {style.tempo_bpm} BPM.
-Instruments: {instruments}.
+Instruments (style baseline): {instruments}.
 Arrangement: {arrangement}
 Avoid: {avoid}.
 
 Make it emotionally strong, replayable, and built to be shared -- the hook should be the
-kind of line someone screenshots or quotes back, not generic background music.
+kind of line someone screenshots or quotes back, not generic background music. This song
+must sound distinct from other songs in the same style -- lean into its specific angle above,
+not just the genre's general conventions.
 """.strip()
 
 
-def build_vocal_prompt(style: StylePreset) -> str:
-    return f"""Vocal direction:
-{style.vocal_direction}
+def build_vocal_prompt(style: StylePreset, plan: dict[str, Any] | None = None) -> str:
+    """Build the vocal-direction prompt sent to the audio model.
 
+    Same merge principle as build_music_prompt: the style preset's
+    vocal_direction is the baseline delivery for the genre, and the plan's
+    voice_direction (when supplied) layers this specific song's vocal
+    character on top -- so, for example, two diss tracks in the same style
+    can still sound mocking vs. cold vs. gleeful depending on what the
+    autopilot planner decided fit this specific prompt.
+    """
+    plan = plan or {}
+    voice_direction = str(plan.get(_PLAN_VOICE_DIRECTION_KEY) or "").strip()
+    specific_section = f"\nThis song's specific vocal character: {voice_direction}\n" if voice_direction else ""
+
+    return f"""Vocal direction (style baseline):
+{style.vocal_direction}
+{specific_section}
 Performance notes:
 - Sing/deliver with real emotion and personality, not robotic perfection.
 - Make every important line clearly audible -- punchlines and hooks must never be mumbled.
