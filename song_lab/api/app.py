@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from song_lab.api.schemas import AceGenerateRequest, GenerateRequest, ImproveRequest, LyricsGenerateRequest, ScoreRequest, TextAceGenerateRequest, TextPackageRequest
@@ -309,6 +309,58 @@ def generate_from_lyrics(request: LyricsGenerateRequest) -> dict:
         "lyrics": lyrics,
         "generation": _result_with_url(result),
     }
+
+
+@app.get("/my-tracks", response_class=HTMLResponse)
+def my_tracks() -> HTMLResponse:
+    """Simple gallery of every generated track still on disk, with proper
+    download buttons. Files get wiped when the free-tier instance restarts, so
+    this is a "grab it while it's here" page, not a permanent library.
+    """
+    audio_dir = OUTPUTS_DIR / "audio"
+    files: list[dict[str, str | int]] = []
+    if audio_dir.exists():
+        for path in sorted(audio_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+            if path.suffix.lower() not in {".mp3", ".wav", ".m4a", ".ogg"}:
+                continue
+            size_kb = path.stat().st_size // 1024
+            files.append({"name": path.name, "url": f"/outputs/audio/{path.name}", "size_kb": size_kb})
+
+    rows = "\n".join(
+        f'''<div class="track">
+              <div class="meta"><div class="name">🎧 {f["name"]}</div><div class="size">{f["size_kb"]} KB</div></div>
+              <div class="btns"><audio controls preload="none" src="{f["url"]}"></audio>
+                <a class="btn" href="{f["url"]}" download="{f["name"]}">⬇ Download</a></div>
+            </div>'''
+        for f in files
+    )
+    empty = "<p class='empty'>No tracks yet. Go to the home page and make one.</p>" if not files else ""
+
+    html = f"""<!doctype html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>My Tracks — BANGR</title>
+<style>
+body{{font-family:-apple-system,system-ui,sans-serif;background:#08070c;color:#f6f4ff;margin:0;padding:24px;line-height:1.5}}
+.wrap{{max-width:720px;margin:0 auto}}
+h1{{font-size:28px;margin:0 0 6px}}
+.sub{{color:#9d96b8;margin:0 0 24px;font-size:14px}}
+.track{{background:#13111c;border:1px solid #2a2438;border-radius:16px;padding:16px;margin-bottom:12px}}
+.meta{{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}}
+.name{{font-weight:600}}
+.size{{color:#6f6789;font-size:12px}}
+.btns{{display:flex;gap:10px;align-items:center;flex-wrap:wrap}}
+audio{{flex:1;min-width:220px}}
+.btn{{background:linear-gradient(135deg,#ff2d95,#7c3aed);color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px;white-space:nowrap}}
+.empty{{color:#9d96b8;text-align:center;padding:40px}}
+.back{{color:#22d3ee;text-decoration:none;font-weight:600;font-size:13px}}
+</style></head>
+<body><div class="wrap">
+<p><a class="back" href="/">← Back to BANGR</a></p>
+<h1>🎧 My Tracks</h1>
+<p class="sub">{len(files)} track{"s" if len(files)!=1 else ""} on the server. Tap ⬇ Download to save each one to your phone. <b>Save them soon — the free server wipes files when it sleeps.</b></p>
+{rows}{empty}
+</div></body></html>"""
+    return HTMLResponse(html)
 
 
 @app.get("/sound-options")
