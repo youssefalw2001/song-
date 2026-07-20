@@ -256,20 +256,48 @@ def generate_from_lyrics(request: LyricsGenerateRequest) -> dict:
     if not lyrics:
         raise HTTPException(status_code=400, detail="Lyrics are required -- write at least a line or two.")
 
-    composed = compose_style(
-        accent=request.accent,
-        genre=request.genre,
-        vibe=request.vibe,
-        voice=request.voice,
-        tempo=request.tempo,
-        aesthetic=request.aesthetic,
-    )
+    # Two paths: (1) a raw hand-tuned producer-style prompt override, or (2) the
+    # standard composed prompt from the tap-to-pick menus. The override path is
+    # for one-off high-quality drops where a generic composition isn't enough.
+    if request.prompt_override and request.prompt_override.strip():
+        prompt_text = request.prompt_override.strip()
+        bpm_hint = request.bpm_override or 100
+        sound_info = {
+            "prompt": prompt_text,
+            "bpm": bpm_hint,
+            "summary": "Hand-tuned prompt (raw producer spec)",
+            "accent": None, "genre": None, "vibe": None,
+            "voice": None, "tempo": None, "aesthetic": None,
+        }
+    else:
+        composed = compose_style(
+            accent=request.accent,
+            genre=request.genre,
+            vibe=request.vibe,
+            voice=request.voice,
+            tempo=request.tempo,
+            aesthetic=request.aesthetic,
+        )
+        prompt_text = composed.prompt
+        bpm_hint = request.bpm_override or composed.bpm
+        sound_info = {
+            "prompt": composed.prompt,
+            "bpm": composed.bpm,
+            "summary": composed.summary,
+            "accent": composed.vocal_style,
+            "genre": composed.genre,
+            "vibe": composed.vibe,
+            "voice": composed.voice,
+            "tempo": composed.tempo,
+            "aesthetic": composed.aesthetic,
+        }
+
     job = SongJob(
-        prompt=composed.prompt,
+        prompt=prompt_text,
         lyrics=lyrics,
         output_dir=request.output_dir,
         duration_seconds=request.duration,
-        bpm_hint=composed.bpm,
+        bpm_hint=bpm_hint,
         author_lyrics=False,
     )
 
@@ -283,32 +311,18 @@ def generate_from_lyrics(request: LyricsGenerateRequest) -> dict:
             vocal_language=request.vocal_language,
             candidates=request.candidates,
             max_retries=generate_max_retries,
-            # We already supply the lyrics AND a fully composed style prompt, so
-            # the model has nothing to author -- skip the thinking/chain-of-thought
-            # steps to shave latency and stay under the upstream's ~60s gateway
-            # timeout (the main cause of 504 failures on this route).
-            thinking=False,
-            use_cot=False,
+            # Default path: thinking/CoT off to stay well under the upstream ~60s
+            # gateway timeout (the free acemusic.ai edge kills requests longer).
+            # max_quality=True flips them back on for richer generation on the
+            # tracks where quality matters more than round-trip speed.
+            thinking=request.max_quality,
+            use_cot=request.max_quality,
         ) as provider:
             result = provider.run(job)
     except AceStepApiError as exc:
         raise HTTPException(status_code=502, detail=f"ACE-Step generation failed: {exc}") from exc
 
-    return {
-        "sound": {
-            "prompt": composed.prompt,
-            "bpm": composed.bpm,
-            "summary": composed.summary,
-            "accent": composed.vocal_style,
-            "genre": composed.genre,
-            "vibe": composed.vibe,
-            "voice": composed.voice,
-            "tempo": composed.tempo,
-            "aesthetic": composed.aesthetic,
-        },
-        "lyrics": lyrics,
-        "generation": _result_with_url(result),
-    }
+    return {"sound": sound_info, "lyrics": lyrics, "generation": _result_with_url(result)}
 
 
 @app.get("/my-tracks", response_class=HTMLResponse)

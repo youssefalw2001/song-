@@ -69,6 +69,9 @@ class LyricsGenerateRequest(BaseModel):
     voice: str = Field(default="male", description="Voice key: male, female, or duet.")
     tempo: str = Field(default="medium", description="Tempo key: slow, medium, or fast.")
     aesthetic: str = Field(default="none", description="Optional trend pack from sound_options.AESTHETICS (e.g. sadgirl_cinematic, slowed_reverb). 'none' = no overlay.")
+    prompt_override: str | None = Field(default=None, description="If set, bypass compose_style entirely and send this raw producer-style prompt to ACE-Step. Used for hand-tuned per-song specs.")
+    bpm_override: int | None = Field(default=None, ge=40, le=220, description="If set, use this BPM as the audio-config hint instead of the composed one.")
+    max_quality: bool = Field(default=False, description="Enable ACE-Step's thinking + chain-of-thought reasoning for a richer, more musical output. Slower and slightly more prone to upstream 504s.")
     duration: int = Field(default=45, ge=10, le=600)
     output_dir: Path = Path("outputs/audio")
     base_url: str = "http://127.0.0.1:8001"
