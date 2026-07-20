@@ -325,6 +325,27 @@ def generate_from_lyrics(request: LyricsGenerateRequest) -> dict:
     return {"sound": sound_info, "lyrics": lyrics, "generation": _result_with_url(result)}
 
 
+@app.post("/tracks/clear")
+def clear_tracks() -> dict:
+    """Wipe every audio file from outputs/audio. Lets us reset the gallery between
+    content batches without waiting for the free-tier ephemeral disk to cycle.
+    Only deletes recognized audio extensions -- never touches metadata JSONs or
+    anything outside the audio directory.
+    """
+    audio_dir = OUTPUTS_DIR / "audio"
+    deleted = 0
+    errors = 0
+    if audio_dir.exists():
+        for path in audio_dir.iterdir():
+            if path.suffix.lower() in {".mp3", ".wav", ".m4a", ".ogg"}:
+                try:
+                    path.unlink()
+                    deleted += 1
+                except OSError:
+                    errors += 1
+    return {"deleted": deleted, "errors": errors, "status": "ok"}
+
+
 @app.get("/my-tracks", response_class=HTMLResponse)
 def my_tracks() -> HTMLResponse:
     """Simple gallery of every generated track still on disk, with proper
